@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="LocalML logo" width="140" />
+</p>
+
 # LocalML
 
 Any Hugging Face model. Local. Multi-modal. Now a **local web server** with an

@@ -54,7 +54,7 @@ Homepage = "https://github.com/IMvision12/localml-app"
 # level). Map the package root to python/ and ship both shapes.
 [tool.setuptools]
 package-dir = { "" = "python" }
-py-modules = ["engine", "routing", "runner", "io_utils", "output_kinds", "_win_compat"]
+py-modules = ["engine", "routing", "io_utils", "output_kinds", "_win_compat"]
 
 [tool.setuptools.packages.find]
 where = ["python"]

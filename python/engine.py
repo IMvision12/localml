@@ -1,16 +1,11 @@
 """LocalML inference engine - the reusable core.
 
-Extracted verbatim from the logic that used to live inside `runner.py` so it can
-be driven two ways with identical behavior:
+Holds all model-loading and inference logic, driven in-process by the FastAPI
+web server (`server/`). Running in-process is what lets the OpenAI-compatible
+endpoint hold a live handle to the currently-loaded LLM and stream tokens from
+it.
 
-  - `runner.py`            the legacy stdin/stdout NDJSON sidecar (kept for the
-                           _test_* harnesses and back-compat).
-  - `server/`             the FastAPI web server, in-process (Phase 2+).
-
-Running in-process is what lets the OpenAI-compatible endpoint hold a live
-handle to the currently-loaded LLM and stream tokens from it.
-
-Design invariants preserved from the old sidecar:
+Design invariants:
   - One model = one loaded pipeline. Adapter instances are cached by
     (adapter_class_name, model_id); a second request reuses the loaded model.
   - Inference is NOT thread-safe against itself (torch). Callers serialize.
@@ -26,7 +21,7 @@ import time
 from pathlib import Path
 
 # Ensure `import routing`, `import adapters`, etc. resolve regardless of how the
-# engine is imported (sidecar, server, or a test).
+# engine is imported (server or a test).
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 # Apply Windows compatibility patches BEFORE any library that might call
@@ -78,10 +73,10 @@ class Engine:
     def run(self, model_id: str, task: str | None, inputs: dict, params: dict | None) -> dict:
         """Execute one inference. Returns an `output_kinds` dict.
 
-        Mirrors the old `runner._run`: overrides merge under request params,
-        the model is inspected + routed, the adapter is loaded (or reused) and
-        invoked. Records the model as the current LLM when it's a text
-        generator so the OpenAI endpoint can find it.
+        Overrides merge under request params, the model is inspected + routed,
+        the adapter is loaded (or reused) and invoked. Records the model as the
+        current LLM when it's a text generator so the OpenAI endpoint can find
+        it.
         """
         if not model_id:
             raise ValueError("Missing 'modelId' - the session isn't bound to a model")
@@ -163,8 +158,7 @@ class Engine:
         format repos don't download 4× the bytes. Raises DownloadCancelled if
         `cancel_event` is set mid-flight.
 
-        Extracted from the old `runner._download`; behavior is identical, only
-        the sink changed (callback instead of NDJSON stdout).
+        Progress is delivered to the `on_progress` callback.
         """
         from huggingface_hub import snapshot_download, HfApi
         from tqdm.auto import tqdm as _BaseTqdm
@@ -288,8 +282,8 @@ def _empty_torch_cache() -> None:
 def actionable_error(e: Exception) -> str:
     """Translate raw tracebacks into messages a user can act on.
 
-    Moved verbatim from runner._actionable_error so both the sidecar and the
-    server surface the same guidance.
+    Maps common failure modes (OOM, gated repos, missing deps, ...) to guidance
+    the UI and API can surface directly.
     """
     msg = str(e)
     lower = msg.lower()

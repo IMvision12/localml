@@ -41,8 +41,8 @@ os.environ.setdefault(
     str(Path(os.environ.get("APPDATA", "")) / "LocalML" / "hf-cache"),
 )
 
-# Same Windows symlink-permission workaround the sidecar uses, so the test
-# runner doesn't hit WinError 1314 during snapshot downloads.
+# Same Windows symlink-permission workaround the engine uses, so this test
+# harness doesn't hit WinError 1314 during snapshot downloads.
 import _win_compat  # noqa: F401, E402
 
 # IMPORTANT: only the LocalML backend modules below. No direct transformers.
@@ -513,7 +513,7 @@ def main():
     # Filtering
     if "small" in args:
         # We can only filter by probed size - fall back: filter at runtime
-        # by skipping anything probed >1GB. The runner already calls probe_repo_size,
+        # by skipping anything probed >1GB. The engine already calls probe_repo_size,
         # so we pass through and let SKIP_TOOLARGE / size_gb sort it.
         # For "small" mode, set a smaller cap.
         global MAX_BYTES

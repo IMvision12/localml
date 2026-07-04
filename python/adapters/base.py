@@ -2,7 +2,7 @@
 
 One instance of an adapter = one loaded model. The router picks the adapter,
 calls `load(info, device)` once, then `run(inputs, params)` per request.
-Instances are cached by (adapter_class, model_id) in the main runner loop.
+Instances are cached by (adapter_class, model_id) in the engine.
 """
 from __future__ import annotations
 
