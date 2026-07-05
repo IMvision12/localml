@@ -18,9 +18,9 @@ for you. One line in your terminal:
 
 ```bash
 # macOS / Linux
-curl -fsSL https://localml.app/install.sh | sh
+curl -fsSL https://www.localml.tech/install.sh | sh
 # Windows (PowerShell)
-irm https://localml.app/install.ps1 | iex
+irm https://www.localml.tech/install.ps1 | iex
 ```
 
 The script bootstraps pipx and installs the LocalML server. On first launch the

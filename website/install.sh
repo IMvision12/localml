@@ -1,7 +1,7 @@
 #!/bin/sh
 # LocalML installer (macOS / Linux)
 #
-#   curl -fsSL https://localml.app/install.sh | sh
+#   curl -fsSL https://www.localml.tech/install.sh | sh
 #
 # Installs the `localml` command via pipx. LocalML is a Python app, so it needs
 # an existing Python 3.10+ - this script does NOT install Python. If Python is
@@ -36,7 +36,7 @@ if [ -z "$PY" ]; then
 Install Python first - https://www.python.org/downloads/
 (or via your package manager: brew install python  /  sudo apt install python3)
 
-then re-run:  curl -fsSL https://localml.app/install.sh | sh"
+then re-run:  curl -fsSL https://www.localml.tech/install.sh | sh"
 fi
 info "Using $("$PY" --version 2>&1) ($(command -v "$PY"))"
 

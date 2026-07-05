@@ -72,7 +72,7 @@
   if (card) card.classList.add('is-you');
 
   if (os === 'windows') {
-    const ps = 'irm https://localml.app/install.ps1 | iex';
+    const ps = 'irm https://www.localml.tech/install.ps1 | iex';
     const cmd = document.getElementById('hero-cmd');
     const text = document.getElementById('hero-cmd-text');
     const prompt = cmd && cmd.querySelector('.cmd-prompt');

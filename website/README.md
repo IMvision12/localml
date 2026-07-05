@@ -23,9 +23,9 @@ the landing page can advertise a one-liner:
 
 ```
 # Windows
-irm https://localml.app/install.ps1 | iex
+irm https://www.localml.tech/install.ps1 | iex
 # macOS / Linux
-curl -fsSL https://localml.app/install.sh | sh
+curl -fsSL https://www.localml.tech/install.sh | sh
 ```
 
 Each script **requires an existing Python 3.10+** (it does *not* install Python -
@@ -34,7 +34,7 @@ pipx and runs `pipx install localml` (server only). The inference stack
 (PyTorch + transformers) is installed **inside the app** on first launch, once
 the user picks CPU or GPU - so the script stays fast and hardware-agnostic.
 
-> The scripts and the page hard-code `https://localml.app`. If you deploy to a
+> The scripts and the page hard-code `https://www.localml.tech`. If you deploy to a
 > different domain, find-and-replace that host in `install.sh`, `install.ps1`,
 > and `index.html` (hero command, the `#install` one-liners, and `script.js`'s
 > Windows override). Serving over **HTTPS** is required for `| iex` / `| sh`.

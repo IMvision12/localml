@@ -1,6 +1,6 @@
 # LocalML installer (Windows / PowerShell)
 #
-#   irm https://localml.app/install.ps1 | iex
+#   irm https://www.localml.tech/install.ps1 | iex
 #
 # Installs the `localml` command via pipx. LocalML is a Python app, so it needs
 # an existing Python 3.10+ - this script does NOT install Python. If Python is
@@ -27,7 +27,7 @@ LocalML needs Python 3.10 or newer, which wasn't found on your PATH.
 Install Python first - https://www.python.org/downloads/
 (tick "Add python.exe to PATH" in the installer), then re-run:
 
-    irm https://localml.app/install.ps1 | iex
+    irm https://www.localml.tech/install.ps1 | iex
 '@ -ForegroundColor Red
   return
 }
