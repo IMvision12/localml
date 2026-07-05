@@ -12,6 +12,11 @@ name: release
 # publisher must match: repo IMvision12/InferML, workflow release.yml, env Any.
 
 on:
+  # Manual trigger from the Actions tab - publishes the current pyproject.toml
+  # version if it hasn't been released yet (no matching tag). Use this to cut
+  # the first release, or to retry, without bumping the version.
+  workflow_dispatch:
+  # Auto-trigger: a version bump in pyproject.toml pushed to main.
   push:
     branches: [main]
     paths:
