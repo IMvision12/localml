@@ -59,7 +59,7 @@ Install Python first - https://www.python.org/downloads/
   # Stream pipx's output (stdout + stderr) as plain text - pipx prints
   # "creating virtual environment..." to stderr, which PowerShell 5.1 would
   # otherwise show as a red error even on a successful install.
-  & $py -m pipx install inferml 2>&1 | ForEach-Object { Write-Host "$_" }
+  & $py -m pipx install inferml --force 2>&1 | ForEach-Object { Write-Host "$_" }
   if ($LASTEXITCODE -ne 0) { Write-Host 'Install failed. See the output above.' -ForegroundColor Red; return }
 
   Write-Host ''

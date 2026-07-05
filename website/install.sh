@@ -51,7 +51,7 @@ fi
 # --- install InferML (server only; the app installs the CPU/GPU stack on first
 #     launch, so we don't pull torch here) --------------------------------------
 info "Installing the InferML server..."
-"$PY" -m pipx install inferml \
+"$PY" -m pipx install inferml --force \
   || die "Install failed. See the output above."
 
 printf '\n'
