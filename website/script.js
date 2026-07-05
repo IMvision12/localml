@@ -1,6 +1,6 @@
-// LocalML landing page - interactions.
+// InferML landing page - interactions.
 //
-// LocalML installs from PyPI (`pipx install inferml`) and runs as a local web
+// InferML installs from PyPI (`pipx install inferml`) and runs as a local web
 // server, so there are no OS-specific installers to fetch. This script wires up
 // the copy-to-clipboard command blocks, highlights the visitor's own platform
 // card, and runs the ambient scroll / hero effects.
@@ -72,7 +72,7 @@
   if (card) card.classList.add('is-you');
 
   if (os === 'windows') {
-    const ps = 'irm https://www.localml.tech/install.ps1 | iex';
+    const ps = 'irm https://inferml.vercel.app/install.ps1 | iex';
     const cmd = document.getElementById('hero-cmd');
     const text = document.getElementById('hero-cmd-text');
     const prompt = cmd && cmd.querySelector('.cmd-prompt');

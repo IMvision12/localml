@@ -34,11 +34,11 @@ async def _lifespan(app: FastAPI):
         poller.cancel()
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="LocalML", version=__version__, lifespan=_lifespan)
+    app = FastAPI(title="InferML", version=__version__, lifespan=_lifespan)
 
     @app.get("/api/health")
     def health():
-        return {"ok": True, "name": "localml", "version": __version__}
+        return {"ok": True, "name": "inferml", "version": __version__}
 
     from server.routes import inference, hf, store, system
     from server.openai_api import routes as openai_routes

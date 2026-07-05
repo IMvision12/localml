@@ -7,7 +7,7 @@ Nothing here calls transformers directly; the test path is the production path.
 Per row:
   1. Probe HF for total repo bytes via huggingface_hub.HfApi.
   2. Skip if >10 GB (toolarge), 401/403 (gated), or unreachable (no-checkpoint).
-  3. Otherwise download (HF_HOME = LocalML's cache), load via adapter.load(),
+  3. Otherwise download (HF_HOME = InferML's cache), load via adapter.load(),
      run adapter.run() with a task-appropriate payload, validate output kind.
   4. Delete the cached snapshot, free CUDA + Python memory, move on.
 
@@ -37,7 +37,7 @@ sys.path.insert(0, str(HERE))
 
 os.environ.setdefault(
     "HF_HOME",
-    str(Path(os.environ.get("APPDATA", "")) / "LocalML" / "hf-cache"),
+    str(Path(os.environ.get("APPDATA", "")) / "InferML" / "hf-cache"),
 )
 
 import _win_compat  # noqa: F401, E402
@@ -469,7 +469,7 @@ def main():
             cases = [c for c in cases if c[0] == m]
 
     save_test_image_once()
-    print(f"=== LocalML matrix smoke test - {len(cases)} cases on device={resolve_device()} ===")
+    print(f"=== InferML matrix smoke test - {len(cases)} cases on device={resolve_device()} ===")
     print(f"  HF_HOME    = {os.environ['HF_HOME']}")
     print(f"  Results    -> {RESULTS_PATH}")
     print(f"  Outputs    -> {OUTPUTS_DIR}")

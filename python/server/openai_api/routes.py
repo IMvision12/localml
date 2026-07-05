@@ -2,7 +2,7 @@
 
 Drop-in target for LangChain `ChatOpenAI`, the OpenAI SDK, LangGraph, etc.:
 point `base_url` at http://localhost:PORT/v1 with any api_key. Routes to the
-LLM currently loaded in LocalML (or lazy-loads one named in `model`).
+LLM currently loaded in InferML (or lazy-loads one named in `model`).
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ async def list_models():
     created = _now()
     return {
         "object": "list",
-        "data": [{"id": mid, "object": "model", "created": created, "owned_by": "localml"} for mid in ids],
+        "data": [{"id": mid, "object": "model", "created": created, "owned_by": "inferml"} for mid in ids],
     }
 
 @router.post("/chat/completions")

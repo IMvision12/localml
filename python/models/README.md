@@ -24,7 +24,7 @@ Each `<family>/__init__.py` MUST export an `ADAPTER` class. For dispatch, declar
 
 ```python
 MODEL_TYPES = ["detr", "rt_detr"]   # transformers `model_type` tags this family handles
-TASK = "object-detection"            # optional. LocalML task name hint
+TASK = "object-detection"            # optional. InferML task name hint
 ADAPTER = DetrAdapter                # subclass of adapters.base.Adapter
 ```
 

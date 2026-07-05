@@ -31,7 +31,7 @@ function App() {
 
 
   const [pyStatus, setPyStatus] = useState(() => {
-    const seed = window.localml?.tasks?.statusSync?.();
+    const seed = window.inferml?.tasks?.statusSync?.();
     if (seed && typeof seed === 'object') return seed;
     return { ready: false, runtimeInstalled: false };
   });
@@ -50,8 +50,8 @@ function App() {
     (async () => {
       try {
         const [settings, v] = await Promise.all([
-          window.localml?.settings.get(),
-          window.localml?.app.version(),
+          window.inferml?.settings.get(),
+          window.inferml?.app.version(),
         ]);
         if (settings?.theme) setTheme(settings.theme);
         if (v) setVersion(v);
@@ -68,11 +68,11 @@ function App() {
     let cancelled = false;
     (async () => {
       try {
-        const initial = await window.localml?.hw.get();
+        const initial = await window.inferml?.hw.get();
         if (!cancelled && initial && !initial.error) setHw(initial);
       } catch {}
       if (cancelled) return;
-      stop = window.localml?.hw.subscribe(data => { if (!cancelled && !data?.error) setHw(data); });
+      stop = window.inferml?.hw.subscribe(data => { if (!cancelled && !data?.error) setHw(data); });
       if (cancelled && stop) { try { stop(); } catch {} stop = null; }
     })();
     return () => {
@@ -82,22 +82,22 @@ function App() {
   }, []);
 
   const reloadSessions = useCallback(async () => {
-    try { setSessions(await window.localml.chats.list() || []); } catch { setSessions([]); }
+    try { setSessions(await window.inferml.chats.list() || []); } catch { setSessions([]); }
   }, []);
   useEffect(() => {
     reloadSessions();
-    const unsub = window.localml?.chats.onUpdate(reloadSessions);
+    const unsub = window.inferml?.chats.onUpdate(reloadSessions);
     return () => { if (unsub) unsub(); };
   }, [reloadSessions]);
 
   const reloadInstalled = useCallback(async () => {
-    try { setInstalledModels((await window.localml?.hf.installed()) || {}); } catch {}
+    try { setInstalledModels((await window.inferml?.hf.installed()) || {}); } catch {}
   }, []);
   useEffect(() => { reloadInstalled(); }, [reloadInstalled, view]);
 
 
   useEffect(() => {
-    const off = window.localml?.hf?.onInstallsChanged?.(() => reloadInstalled());
+    const off = window.inferml?.hf?.onInstallsChanged?.(() => reloadInstalled());
     return () => { try { off && off(); } catch {} };
   }, [reloadInstalled]);
 
@@ -109,7 +109,7 @@ function App() {
     let alive = true;
     const probe = async () => {
       try {
-        const r = await window.localml?.updates?.check?.();
+        const r = await window.inferml?.updates?.check?.();
         if (!alive) return;
         if (r?.ok && r.hasUpdate) setUpdateInfo(r);
         else setUpdateInfo(null);
@@ -121,7 +121,7 @@ function App() {
   }, []);
 
   const refreshPyStatus = useCallback(async () => {
-    try { setPyStatus((await window.localml?.tasks.status()) || { ready: false }); } catch {}
+    try { setPyStatus((await window.inferml?.tasks.status()) || { ready: false }); } catch {}
   }, []);
   useEffect(() => { refreshPyStatus(); }, [refreshPyStatus]);
 
@@ -156,7 +156,7 @@ function App() {
       requestAnimationFrame(flush);
     };
 
-    const unsub = window.localml?.tasks.onSetupProgress((evt) => {
+    const unsub = window.inferml?.tasks.onSetupProgress((evt) => {
       if (evt.kind === 'step') {
         pendingStep = evt.text;
         pendingLog.push(`» ${evt.text}`);
@@ -177,7 +177,7 @@ function App() {
   const runPySetup = async (opts) => {
 
     setPySetup({ running: true, log: [], step: 'Starting…', error: null });
-    const res = await window.localml?.tasks.setup(opts);
+    const res = await window.inferml?.tasks.setup(opts);
     if (res?.ok) {
       setPySetup(prev => ({ ...(prev || {}), running: false, done: true, step: 'Ready' }));
 
@@ -202,8 +202,8 @@ function App() {
   };
 
   useEffect(() => {
-    const unsub = window.localml?.window.onState(s => setMaximized(!!s?.maximized));
-    window.localml?.window.isMaximized().then(m => setMaximized(!!m));
+    const unsub = window.inferml?.window.onState(s => setMaximized(!!s?.maximized));
+    window.inferml?.window.isMaximized().then(m => setMaximized(!!m));
     return () => { if (unsub) unsub(); };
   }, []);
 
@@ -213,11 +213,11 @@ function App() {
   useEffect(() => {
     const onStart  = (e) => setUpdatingTo(e.detail?.version || 'latest');
     const onFailed = () => setUpdatingTo(null);
-    window.addEventListener('localml:update-installing', onStart);
-    window.addEventListener('localml:update-install-failed', onFailed);
+    window.addEventListener('inferml:update-installing', onStart);
+    window.addEventListener('inferml:update-install-failed', onFailed);
     return () => {
-      window.removeEventListener('localml:update-installing', onStart);
-      window.removeEventListener('localml:update-install-failed', onFailed);
+      window.removeEventListener('inferml:update-installing', onStart);
+      window.removeEventListener('inferml:update-install-failed', onFailed);
     };
   }, []);
 
@@ -232,7 +232,7 @@ function App() {
     else if (theme === 'gruvbox')    document.body.classList.add('theme-gruvbox');
     else if (theme === 'onedark')    document.body.classList.add('theme-onedark');
 
-    window.localml?.settings.save({ theme }).catch(() => {});
+    window.inferml?.settings.save({ theme }).catch(() => {});
   }, [theme]);
 
   useEffect(() => {
@@ -281,7 +281,7 @@ function App() {
   const openSession = (id) => { setView('session'); setActiveSession(id); };
   const startSessionWithModel = async (modelId) => {
 
-    const fresh = await window.localml?.hf.installed().catch(() => null);
+    const fresh = await window.inferml?.hf.installed().catch(() => null);
     const meta = (fresh && fresh[modelId]) || installedModels[modelId] || {};
     const task = meta?.task || '';
     const kind = CHAT_TASKS.has(task) ? 'chat' : 'task';
@@ -296,7 +296,7 @@ function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    try { await window.localml.chats.save(session); } catch {}
+    try { await window.inferml.chats.save(session); } catch {}
     if (fresh) setInstalledModels(fresh);
     await reloadSessions();
     setView('session');
@@ -334,7 +334,7 @@ function App() {
         <div className="titlebar">
           <div className="tb-brand no-drag" onClick={openHub}>
             <Logo size={16}/>
-            <span>LocalML</span>
+            <span>InferML</span>
           </div>
           <div className="tb-crumbs">
             {view === 'session' && activeSessionObj && (<span className="tb-crumb active">{activeSessionObj.title || 'Session'}</span>)}
@@ -389,11 +389,11 @@ function App() {
             </div>
           )}
           <div className="tb-win-controls no-drag">
-            <div className="tb-wc" onClick={() => window.localml?.window.minimize()}><Icon name="min" size={12} stroke={1.2}/></div>
-            <div className="tb-wc" onClick={() => window.localml?.window.maximize()}>
+            <div className="tb-wc" onClick={() => window.inferml?.window.minimize()}><Icon name="min" size={12} stroke={1.2}/></div>
+            <div className="tb-wc" onClick={() => window.inferml?.window.maximize()}>
               <Icon name={maximized ? 'restore' : 'max'} size={10} stroke={1.2}/>
             </div>
-            <div className="tb-wc close" onClick={() => window.localml?.window.close()}><Icon name="close" size={12} stroke={1.2}/></div>
+            <div className="tb-wc close" onClick={() => window.inferml?.window.close()}><Icon name="close" size={12} stroke={1.2}/></div>
           </div>
         </div>
 
@@ -688,7 +688,7 @@ function ChatItem({ session, isActive, onOpen, onDeleted }) {
   const togglePin = async () => {
     setMenuOpen(false);
 
-    try { await window.localml?.chats.patch(session.id, { pinned: !session.pinned }); } catch {}
+    try { await window.inferml?.chats.patch(session.id, { pinned: !session.pinned }); } catch {}
   };
 
   const startRename = () => {
@@ -701,7 +701,7 @@ function ChatItem({ session, isActive, onOpen, onDeleted }) {
     const t = draft.trim();
     setRenaming(false);
     if (!t || t === (session.title || '')) return;
-    try { await window.localml?.chats.patch(session.id, { title: t, updatedAt: Date.now() }); } catch {}
+    try { await window.inferml?.chats.patch(session.id, { title: t, updatedAt: Date.now() }); } catch {}
   };
 
   const askDelete = () => {
@@ -712,7 +712,7 @@ function ChatItem({ session, isActive, onOpen, onDeleted }) {
   const confirmDelete = async () => {
     setConfirmOpen(false);
     try {
-      await window.localml?.chats.delete(session.id);
+      await window.inferml?.chats.delete(session.id);
       onDeleted && onDeleted(session.id);
     } catch {}
   };

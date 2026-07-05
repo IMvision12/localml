@@ -22,7 +22,7 @@ Only the family name is listed below. Every public variant of a family that ship
 - D-FINE
 - Table Transformer
 
-> Not supported: Ultralytics YOLO (v5-v12), RF-DETR, detectron2-based models, mmdetection. They use different runtimes that LocalML doesn't ship.
+> Not supported: Ultralytics YOLO (v5-v12), RF-DETR, detectron2-based models, mmdetection. They use different runtimes that InferML doesn't ship.
 
 ## Zero-Shot Object Detection
 

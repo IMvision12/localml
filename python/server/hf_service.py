@@ -101,7 +101,7 @@ def _is_natively_supported(m: dict) -> bool:
     return any(t in allowed for t in tags)
 
 def _hf_headers() -> dict:
-    headers = {"User-Agent": "localml"}
+    headers = {"User-Agent": "inferml"}
     token = get_token()
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -219,7 +219,7 @@ def verify_token(token: str) -> dict:
     try:
         req = urllib.request.Request(
             "https://huggingface.co/api/whoami-v2",
-            headers={"Authorization": f"Bearer {token}", "User-Agent": "localml"},
+            headers={"Authorization": f"Bearer {token}", "User-Agent": "inferml"},
         )
         with urllib.request.urlopen(req, timeout=15) as r:
             who = json.loads(r.read().decode("utf-8"))

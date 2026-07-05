@@ -1,4 +1,4 @@
-"""LocalML inference engine - the reusable core.
+"""InferML inference engine - the reusable core.
 
 Holds all model-loading and inference logic, driven in-process by the FastAPI
 web server (`server/`). Running in-process is what lets the OpenAI-compatible
@@ -261,7 +261,7 @@ def actionable_error(e: Exception) -> str:
         return "Out of memory - try a smaller model or switch to CPU (disable CUDA) in settings."
     if "cve-2025-32434" in lower or ("torch" in lower and "v2.6" in msg):
         return ("Your torch version is too old - transformers requires torch ≥ 2.6 to load this model's weights. "
-                "Reinstall LocalML's inference extra with a torch ≥ 2.6 wheel.")
+                "Reinstall InferML's inference extra with a torch ≥ 2.6 wheel.")
     if "not a valid" in lower and "trust_remote_code" in lower:
         return ("This model requires `trust_remote_code=True`. Add an entry for it in "
                 "python/model_overrides.json: { \"trust_remote_code\": true }.")
@@ -280,11 +280,11 @@ def actionable_error(e: Exception) -> str:
                 "https://huggingface.co/settings/tokens (Read access is enough), then retry.")
     if "no module named" in lower:
         mod = msg.split("'")[1] if "'" in msg else "unknown"
-        return f"Missing Python package: `{mod}`. Install it into the LocalML environment and retry."
+        return f"Missing Python package: `{mod}`. Install it into the InferML environment and retry."
     m = re.search(r"requires the (\S+) library", msg)
     if m:
         mod = m.group(1).strip("`'\".,")
-        return f"Missing Python package: `{mod}`. Install it into the LocalML environment and retry."
+        return f"Missing Python package: `{mod}`. Install it into the InferML environment and retry."
     if "could not load model" in lower or "not a recognized model" in lower:
         return (f"{msg}\n\nThis model doesn't fit any registered family. Add a folder "
                 "under python/models/ for it, pin it in python/model_overrides.json, "

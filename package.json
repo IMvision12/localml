@@ -1,11 +1,11 @@
 {
-  "name": "localml-webui",
-  "productName": "LocalML",
-  "version": "1.0.1",
-  "description": "LocalML web UI build tooling. The app itself ships as the Python package `inferml` (see pyproject.toml).",
+  "name": "inferml-webui",
+  "productName": "InferML",
+  "version": "1.0.2",
+  "description": "InferML web UI build tooling. The app itself ships as the Python package `inferml` (see pyproject.toml).",
   "private": true,
   "author": {
-    "name": "LocalML"
+    "name": "InferML"
   },
   "scripts": {
     "gen:archs": "python python/_generate_supported_architectures.py",

@@ -1,4 +1,4 @@
-"""`localml` console entry point.
+"""`inferml` console entry point.
 
 Starts uvicorn on a configurable port (default 11500), prints the URL, and
 opens the browser. This is the single command a pipx-installed user runs.
@@ -20,8 +20,8 @@ DEFAULT_PORT = 11500
 
 def _parse_args(argv):
     p = argparse.ArgumentParser(
-        prog="localml",
-        description="Run the LocalML local web server (serves the UI + inference API).",
+        prog="inferml",
+        description="Run the InferML local web server (serves the UI + inference API).",
     )
     p.add_argument("--host", default=DEFAULT_HOST,
                    help=f"Bind address (default {DEFAULT_HOST}; use 0.0.0.0 to expose on the LAN).")
@@ -49,7 +49,7 @@ def main(argv=None) -> None:
     display_host = "localhost" if args.host in ("127.0.0.1", "0.0.0.0") else args.host
     url = f"http://{display_host}:{args.port}"
     print(
-        "\n  LocalML - local, on-device model runner\n"
+        "\n  InferML - local, on-device model runner\n"
         f"  ->  {url}\n"
         "  Open that URL in your browser. Press Ctrl+C to stop.\n",
         flush=True,

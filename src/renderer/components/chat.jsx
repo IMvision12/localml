@@ -61,7 +61,7 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
     if (!sending || stopping) return;
     setStopping(true);
     stoppedByUserRef.current = true;
-    try { await window.localml?.tasks?.stop?.(); } catch {}
+    try { await window.inferml?.tasks?.stop?.(); } catch {}
   };
   const [janusMode, setJanusMode] = useStateCH('understand');
   const scrollRef = useRefCH(null);
@@ -74,7 +74,7 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
     let cancelled = false;
     (async () => {
       if (!sessionId) return;
-      const c = await window.localml.chats.get(sessionId);
+      const c = await window.inferml.chats.get(sessionId);
       if (cancelled || !c) return;
 
       const healed = (c.messages || []).map(m =>
@@ -84,7 +84,7 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
       );
       const changed = healed.some((m, i) => m !== (c.messages || [])[i]);
       const loaded = { ...c, messages: healed };
-      if (changed) window.localml.chats.save(loaded).catch(() => {});
+      if (changed) window.inferml.chats.save(loaded).catch(() => {});
       setChat(loaded);
     })();
     return () => { cancelled = true; };
@@ -151,7 +151,7 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
     setChat(nextChat);
     setInput('');
     setAtts([]);
-    try { await window.localml.chats.save(nextChat); } catch {}
+    try { await window.inferml.chats.save(nextChat); } catch {}
     onSaved && onSaved(nextChat);
 
 
@@ -176,14 +176,14 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
       ...(isJanus ? { params: { janus_mode: janusMode } } : {}),
     };
 
-    const res = await window.localml.tasks.run(payload).catch(e => ({ ok: false, error: String(e?.message || e) }));
+    const res = await window.inferml.tasks.run(payload).catch(e => ({ ok: false, error: String(e?.message || e) }));
 
     const patchAssistant = (patch) => {
       setChat(prev => {
         if (!prev) return prev;
         const msgs = prev.messages.map(m => m.id === asstId ? { ...m, ...patch, streaming: false } : m);
         const done = { ...prev, messages: msgs };
-        window.localml.chats.save(done).catch(() => {});
+        window.inferml.chats.save(done).catch(() => {});
         onSaved && onSaved(done);
         return done;
       });
@@ -211,7 +211,7 @@ function ChatWorkspace({ sessionId, modelId, modelMeta, onSaved }) {
   };
 
   const attachImage = async () => {
-    const att = await window.localml.dialog.openImage();
+    const att = await window.inferml.dialog.openImage();
     if (att) setAtts(a => [...a, att]);
   };
   const removeAtt = (i) => setAtts(a => a.filter((_, idx) => idx !== i));

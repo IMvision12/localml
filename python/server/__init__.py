@@ -1,4 +1,4 @@
-"""LocalML local web server.
+"""InferML local web server.
 
 Replaces the Electron shell: a FastAPI + uvicorn app that serves the compiled
 React build as static files and (from Phase 2 onward) exposes the inference
@@ -10,4 +10,4 @@ a live handle to the currently-loaded LLM.
 """
 from __future__ import annotations
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"

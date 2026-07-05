@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inferml"
-version = "1.0.1"
+version = "1.0.2"
 description = "Any HuggingFace model. Local. Multi-modal. Served over an OpenAI-compatible API."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "LocalML" }]
+authors = [{ name = "InferML" }]
 keywords = ["huggingface", "transformers", "inference", "openai", "local", "llm", "diffusion"]
 
 # The web server layer. The inference stack (torch, transformers, diffusers, …)
@@ -44,7 +44,7 @@ inference = [
 ]
 
 [project.scripts]
-localml = "server.cli:main"
+inferml = "server.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/IMvision12/InferML"

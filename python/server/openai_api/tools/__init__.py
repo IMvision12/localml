@@ -49,7 +49,7 @@ def parse_tool_calls(model_id: str, text: str) -> list:
     parser = get_parser(model_id)
     if parser is None:
         raise ToolFormatUnknown(
-            f"Model {model_id!r} has no known tool-call format. LocalML currently "
+            f"Model {model_id!r} has no known tool-call format. InferML currently "
             f"parses tool calls for: {', '.join(supported_families())}."
         )
     return parser.parse(text or "")

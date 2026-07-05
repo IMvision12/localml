@@ -35,7 +35,7 @@ async def logs():
 @router.get("/app")
 async def app_info():
     from server.appdata import data_dir
-    return {"name": "localml", "version": __version__, "dataDir": str(data_dir())}
+    return {"name": "inferml", "version": __version__, "dataDir": str(data_dir())}
 
 _SIZE_CACHE: dict[str, tuple] = {}
 _SIZE_TTL = 20.0

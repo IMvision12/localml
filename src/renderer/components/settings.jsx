@@ -88,7 +88,7 @@ function Row({ title, sub, value, control, onClick }) {
 }
 
 function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
-  const openExternal = (url) => window.localml?.app?.openExternal?.(url);
+  const openExternal = (url) => window.inferml?.app?.openExternal?.(url);
   const [logsPath, setLogsPath] = useStateS('');
   const [cacheStat, setCacheStat] = useStateS({ bytes: null, files: null, paths: [] });
   const [runtimeStat, setRuntimeStat] = useStateS({ bytes: null, files: null });
@@ -121,8 +121,8 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
     };
     try {
       await Promise.all([
-        settle('hf', window.localml?.storage?.size?.('hfCache')),
-        settle('py', window.localml?.storage?.size?.('pyRuntime')),
+        settle('hf', window.inferml?.storage?.size?.('hfCache')),
+        settle('py', window.inferml?.storage?.size?.('pyRuntime')),
       ]);
     } catch {
       setSizeLoading({ hf: false, py: false });
@@ -133,7 +133,7 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
     let alive = true;
     (async () => {
       try {
-        const p = await window.localml?.logs?.path?.();
+        const p = await window.inferml?.logs?.path?.();
         if (alive && p) setLogsPath(p);
       } catch {}
       if (alive) refreshSizes();
@@ -144,12 +144,12 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
 
 
   useEffectS(() => {
-    const off = window.localml?.hf?.onInstallsChanged?.(() => refreshSizes());
+    const off = window.inferml?.hf?.onInstallsChanged?.(() => refreshSizes());
     return () => { try { off && off(); } catch {} };
   }, []);
 
   const viewLogs = async () => {
-    try { await window.localml?.logs?.view?.(); } catch {}
+    try { await window.inferml?.logs?.view?.(); } catch {}
   };
 
   const doClear = async (key) => {
@@ -157,8 +157,8 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
     setBusy(key);
     try {
       const res = key === 'hf'
-        ? await window.localml?.storage?.clearHfCache?.()
-        : await window.localml?.storage?.clearPyRuntime?.();
+        ? await window.inferml?.storage?.clearHfCache?.()
+        : await window.inferml?.storage?.clearPyRuntime?.();
       if (!res?.ok) setError(res?.error || 'Clear failed');
     } catch (e) {
       setError(String(e?.message || e));
@@ -185,7 +185,7 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
       <div className="s-card">
         <Row
           title="Version"
-          value={`LocalML v${version || '-'}`}
+          value={`InferML v${version || '-'}`}
           control={<UpdateCheckButton currentVersion={version}/>}
         />
         <Row title="Platform" value={`${hw?.os?.distro || hw?.os?.platform || '-'} · ${hw?.os?.arch || ''}`.trim()}/>
@@ -442,7 +442,7 @@ function UpdateCheckButton({ currentVersion }) {
   const [result, setResult] = useStateS(null);
   const [progress, setProgress] = useStateS(0);   
   const [confirmOpen, setConfirmOpen] = useStateS(false);
-  const openExternal = (url) => window.localml?.app?.openExternal?.(url);
+  const openExternal = (url) => window.inferml?.app?.openExternal?.(url);
 
 
 
@@ -450,7 +450,7 @@ function UpdateCheckButton({ currentVersion }) {
 
   useEffectS(() => {
     let mounted = true;
-    const u = window.localml?.updates;
+    const u = window.inferml?.updates;
     if (!u) return;
     const offProgress = u.onProgress?.((evt) => {
       if (!mounted) return;
@@ -509,7 +509,7 @@ function UpdateCheckButton({ currentVersion }) {
     setProgress(0);
     try {
 
-      const r = await window.localml?.updates?.check?.({ force: true });
+      const r = await window.inferml?.updates?.check?.({ force: true });
       if (!r || !r.ok) {
 
         setResult(r || { error: 'unknown' });
@@ -533,7 +533,7 @@ function UpdateCheckButton({ currentVersion }) {
     setProgress(0);
     setState('downloading');
     try {
-      const r = await window.localml?.updates?.download?.();
+      const r = await window.inferml?.updates?.download?.();
       if (!r) { setState('error'); setResult({ error: 'No response' }); return; }
       if (r.alreadyDownloaded) { setProgress(100); setState('downloaded'); return; }
       if (!r.ok) { setResult({ error: r.error || 'Download failed' }); setState('error'); return; }
@@ -549,24 +549,24 @@ function UpdateCheckButton({ currentVersion }) {
 
 
 
-    window.dispatchEvent(new CustomEvent('localml:update-installing', {
+    window.dispatchEvent(new CustomEvent('inferml:update-installing', {
       detail: { version: result?.latestVersion || '' },
     }));
 
 
 
     const timeoutId = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('localml:update-install-failed'));
+      window.dispatchEvent(new CustomEvent('inferml:update-install-failed'));
       setResult((r) => ({ ...(r || {}), error: 'Install timed out. Try downloading the installer manually from the website.' }));
       setState('idle');
     }, 30000);
 
-    try { await window.localml?.updates?.install?.(); }
+    try { await window.inferml?.updates?.install?.(); }
     catch (e) {
       clearTimeout(timeoutId);
       setResult({ error: String(e?.message || e) });
       setState('error');
-      window.dispatchEvent(new CustomEvent('localml:update-install-failed'));
+      window.dispatchEvent(new CustomEvent('inferml:update-install-failed'));
     }
 
   };
@@ -599,7 +599,7 @@ function UpdateCheckButton({ currentVersion }) {
         </div>
         <ConfirmDialog
           open={confirmOpen}
-          title={`Download LocalML ${result.latestVersion}?`}
+          title={`Download InferML ${result.latestVersion}?`}
           message="The update will download in the background. You'll be prompted to install and restart when it's ready."
           confirmLabel="Download"
           cancelLabel="Cancel"

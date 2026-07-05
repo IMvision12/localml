@@ -21,7 +21,7 @@ HERE = Path(__file__).parent.resolve()
 sys.path.insert(0, str(HERE))
 
 import os
-os.environ.setdefault("HF_HOME", str(Path(os.environ.get("APPDATA", "")) / "LocalML" / "hf-cache"))
+os.environ.setdefault("HF_HOME", str(Path(os.environ.get("APPDATA", "")) / "InferML" / "hf-cache"))
 
 from routing import inspect_model, pick_adapter  # noqa: E402
 from io_utils import resolve_device  # noqa: E402
@@ -151,7 +151,7 @@ def _preview(o):
 def main():
     suites = set(sys.argv[1:]) or {"quick"}
     cases = [c for c in CASES if c[0] in suites or "all" in suites]
-    print(f"\n=== LocalML inference smoke test - {len(cases)} cases on device={resolve_device()} ===\n")
+    print(f"\n=== InferML inference smoke test - {len(cases)} cases on device={resolve_device()} ===\n")
     results = []
     for case in cases:
         print(f">> {case[1]}  ({case[2]})")

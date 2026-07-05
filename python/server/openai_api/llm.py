@@ -36,7 +36,7 @@ def _extract_model_tokenizer(adapter):
         tokenizer = None
     return model, tokenizer
 
-_GENERIC_MODEL_NAMES = {"", "localml", "default", "current", "gpt-3.5-turbo", "gpt-4", "gpt-4o"}
+_GENERIC_MODEL_NAMES = {"", "inferml", "default", "current", "gpt-3.5-turbo", "gpt-4", "gpt-4o"}
 
 def resolve_llm(engine, requested_model: str | None):
     """Return (model, tokenizer, model_id). Prefers an explicitly named,
@@ -64,7 +64,7 @@ def resolve_llm(engine, requested_model: str | None):
 
     if adapter is None:
         raise LLMNotLoaded(
-            "No LLM is loaded. Open a text-generation model in LocalML first, "
+            "No LLM is loaded. Open a text-generation model in InferML first, "
             "or pass a valid installed model id as `model`."
         )
 

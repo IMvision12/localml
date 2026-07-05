@@ -587,7 +587,7 @@ a { color: inherit; text-decoration: none; }
 .dot.red { background: #ff5f57; }
 .dot.yellow { background: #febc2e; }
 .dot.green { background: #28c840; }
-/* LocalML brand mark in the chrome - the canonical constellation SVG
+/* InferML brand mark in the chrome - the canonical constellation SVG
    (same one in the top nav). Sized to match the dots and brand-text
    height. The SVG renders its own background + stars, so we only need
    layout here. */

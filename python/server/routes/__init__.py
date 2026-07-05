@@ -1,1 +1,1 @@
-"""HTTP routers for the LocalML web server."""
+"""HTTP routers for the InferML web server."""

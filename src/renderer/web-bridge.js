@@ -101,7 +101,7 @@
     });
   }
 
-  window.localml = {
+  window.inferml = {
 
     tasks: {
       run: (payload) => jpost('/api/run', payload || {}),

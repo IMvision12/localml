@@ -4,10 +4,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LocalML - run any Hugging Face model locally, with an OpenAI-compatible API</title>
+  <title>InferML - run any Hugging Face model locally, with an OpenAI-compatible API</title>
   <meta name="description"
     content="A local web server for running any Hugging Face model on your own machine. Install with pipx, open your browser, and point LangChain, LangGraph or the OpenAI SDK at it like Ollama. Detection, segmentation, VLMs, ASR, TTS, diffusion. All local, no cloud, no upload." />
-  <meta property="og:title" content="LocalML. Run any Hugging Face model, locally - with an OpenAI-compatible API." />
+  <meta property="og:title" content="InferML. Run any Hugging Face model, locally - with an OpenAI-compatible API." />
   <meta property="og:description"
     content="pipx install inferml. Browse. Download. Run. All local, behind a browser UI and an OpenAI-compatible API. 200+ model families supported." />
   <meta property="og:type" content="website" />
@@ -49,7 +49,7 @@
             <circle cx="40" cy="96" r="5" />
           </g>
         </svg>
-        <span>LocalML</span>
+        <span>InferML</span>
       </a>
       <nav class="nav-links">
         <a href="#models">Models</a>
@@ -109,9 +109,9 @@
       </div>
 
       <div class="cta-block">
-        <div class="cmd cmd-hero" id="hero-cmd" data-copy="curl -fsSL https://www.localml.tech/install.sh | sh">
+        <div class="cmd cmd-hero" id="hero-cmd" data-copy="curl -fsSL https://inferml.vercel.app/install.sh | sh">
           <span class="cmd-prompt">$</span>
-          <code class="cmd-text" id="hero-cmd-text">curl -fsSL https://www.localml.tech/install.sh | sh</code>
+          <code class="cmd-text" id="hero-cmd-text">curl -fsSL https://inferml.vercel.app/install.sh | sh</code>
           <button class="cmd-copy" type="button" aria-label="Copy install command">
             <svg class="cmd-copy-ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="9" y="9" width="12" height="12" rx="2"/>
@@ -120,7 +120,7 @@
             <span class="cmd-copy-label">Copy</span>
           </button>
         </div>
-        <p class="cta-sub">then run <code>localml</code> and open <a href="#install">localhost:11500</a> · needs Python 3.10+</p>
+        <p class="cta-sub">then run <code>inferml</code> and open <a href="#install">localhost:11500</a> · needs Python 3.10+</p>
       </div>
     </section>
 
@@ -432,7 +432,7 @@
       <div class="section-head">
         <h2>Also an OpenAI-compatible API.</h2>
         <p>Point LangChain, LangGraph, or the OpenAI SDK at your own machine - the way you point them at Ollama.
-          It routes to whichever model is loaded in LocalML.</p>
+          It routes to whichever model is loaded in InferML.</p>
       </div>
       <div class="api-frame">
         <div class="api-code">
@@ -546,7 +546,7 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
     <section id="models" class="models">
       <div class="section-head">
         <h2>Everything in the Hub, ready to run.</h2>
-        <p>200+ model families, each one verified against our architecture whitelist. If it shows up in LocalML, it
+        <p>200+ model families, each one verified against our architecture whitelist. If it shows up in InferML, it
           loads. No broken downloads, no missing packages, no guesswork.</p>
       </div>
       <div class="model-families">
@@ -597,7 +597,7 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
     <section id="platforms" class="platforms">
       <div class="section-head">
         <h2>Runs everywhere Python does.</h2>
-        <p>One <span class="mono">pipx install</span>, then <span class="mono">localml</span>. Windows, macOS, and Linux -
+        <p>One <span class="mono">pipx install</span>, then <span class="mono">inferml</span>. Windows, macOS, and Linux -
           CUDA, Apple MPS, or CPU, auto-detected.</p>
       </div>
       <div class="plat-grid">
@@ -670,9 +670,9 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
             </svg>
             <span>Windows · PowerShell</span>
           </div>
-          <div class="cmd" data-copy="irm https://www.localml.tech/install.ps1 | iex">
+          <div class="cmd" data-copy="irm https://inferml.vercel.app/install.ps1 | iex">
             <span class="cmd-prompt">&gt;</span>
-            <code class="cmd-text">irm https://www.localml.tech/install.ps1 | iex</code>
+            <code class="cmd-text">irm https://inferml.vercel.app/install.ps1 | iex</code>
             <button class="cmd-copy" type="button" aria-label="Copy command">
               <svg class="cmd-copy-ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>
@@ -688,9 +688,9 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
             </svg>
             <span>macOS &amp; Linux</span>
           </div>
-          <div class="cmd" data-copy="curl -fsSL https://www.localml.tech/install.sh | sh">
+          <div class="cmd" data-copy="curl -fsSL https://inferml.vercel.app/install.sh | sh">
             <span class="cmd-prompt">$</span>
-            <code class="cmd-text">curl -fsSL https://www.localml.tech/install.sh | sh</code>
+            <code class="cmd-text">curl -fsSL https://inferml.vercel.app/install.sh | sh</code>
             <button class="cmd-copy" type="button" aria-label="Copy command">
               <svg class="cmd-copy-ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>
@@ -701,7 +701,7 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
         </div>
       </div>
       <p class="install-foot">
-        On first launch, pick <b>CPU</b> or <b>GPU</b> - LocalML installs the matching PyTorch build for you.
+        On first launch, pick <b>CPU</b> or <b>GPU</b> - InferML installs the matching PyTorch build for you.
       </p>
     </section>
 
@@ -732,11 +732,11 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
               <circle cx="40" cy="96" r="5" />
             </g>
           </svg>
-          <span>LocalML</span>
+          <span>InferML</span>
         </div>
         <div class="footer-links">
           <a href="https://github.com/IMvision12/InferML" target="_blank" rel="noopener">GitHub</a>
-          <a href="https://pypi.org/project/localml/" target="_blank" rel="noopener">PyPI</a>
+          <a href="https://pypi.org/project/inferml/" target="_blank" rel="noopener">PyPI</a>
           <a href="https://github.com/IMvision12/InferML/issues" target="_blank" rel="noopener">Issues</a>
           <a href="https://github.com/IMvision12/InferML/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
         </div>

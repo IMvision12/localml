@@ -65,7 +65,7 @@ def override_for(model_id: str) -> dict:
     return load_overrides().get(model_id, {}) or {}
 
 def _load_plugin_module(path: Path):
-    spec = importlib.util.spec_from_file_location(f"localml_plugin_{path.stem}", str(path))
+    spec = importlib.util.spec_from_file_location(f"inferml_plugin_{path.stem}", str(path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

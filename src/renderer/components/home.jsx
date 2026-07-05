@@ -12,14 +12,14 @@ function Home({ onNewChat, onOpenModels, hw, chats, provider, version, onOpenCha
           'facebook/sam2.1-hiera-large',
           'distil-whisper/distil-large-v3',
         ];
-        const r = await window.localml.hf.search(picks[0], null);
+        const r = await window.inferml.hf.search(picks[0], null);
         if (cancelled) return;
         if (Array.isArray(r)) {
           const byId = new Map((r || []).map(m => [m.id, m]));
           const results = [];
           for (const id of picks) {
             if (byId.has(id)) { results.push(byId.get(id)); continue; }
-            const sub = await window.localml.hf.search(id.split('/').pop(), null);
+            const sub = await window.inferml.hf.search(id.split('/').pop(), null);
             if (Array.isArray(sub)) {
               const match = sub.find(m => m.id === id) || sub[0];
               if (match) results.push(match);
@@ -155,14 +155,14 @@ function Home({ onNewChat, onOpenModels, hw, chats, provider, version, onOpenCha
         </div>
 
         <div className="home-footer">
-          <span>LocalML {version || '0.1.0'}</span><span className="sep">·</span>
+          <span>InferML {version || '0.1.0'}</span><span className="sep">·</span>
           <span>electron</span><span className="sep">·</span>
           <span>{hw?.os?.platform || 'unknown'} {hw?.os?.release || ''}</span><span className="sep">·</span>
           <span>{provider ? `orchestrator · ${provider}` : 'no orchestrator'}</span>
           <span style={{flex:1}}/>
-          <a className="home-link" onClick={() => window.localml?.app.openExternal('https://huggingface.co/')}>HF Hub</a><span className="sep">·</span>
-          <a className="home-link" onClick={() => window.localml?.app.openExternal('https://docs.anthropic.com/')}>Docs</a><span className="sep">·</span>
-          <a className="home-link" onClick={() => window.localml?.app.openExternal('https://github.com/')}>Report issue</a>
+          <a className="home-link" onClick={() => window.inferml?.app.openExternal('https://huggingface.co/')}>HF Hub</a><span className="sep">·</span>
+          <a className="home-link" onClick={() => window.inferml?.app.openExternal('https://docs.anthropic.com/')}>Docs</a><span className="sep">·</span>
+          <a className="home-link" onClick={() => window.inferml?.app.openExternal('https://github.com/')}>Report issue</a>
         </div>
       </div>
     </div>
@@ -183,7 +183,7 @@ function HomePrompt({ onSend, provider }) {
       <div className="hp-inner">
         <Icon name="sparkle" size={14} style={{color:'var(--accent)'}}/>
         <input
-          placeholder="Ask anything. LocalML will route it to the right workspace…"
+          placeholder="Ask anything. InferML will route it to the right workspace…"
           value={v}
           onChange={e => setV(e.target.value)}
           onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit(); else if (e.key === 'Enter') submit(); }}

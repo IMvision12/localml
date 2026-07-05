@@ -1,9 +1,9 @@
 #!/bin/sh
-# LocalML installer (macOS / Linux)
+# InferML installer (macOS / Linux)
 #
-#   curl -fsSL https://www.localml.tech/install.sh | sh
+#   curl -fsSL https://inferml.vercel.app/install.sh | sh
 #
-# Installs the `localml` command via pipx. LocalML is a Python app, so it needs
+# Installs the `inferml` command via pipx. InferML is a Python app, so it needs
 # an existing Python 3.10+ - this script does NOT install Python. If Python is
 # missing (or too old) it stops and tells you where to get it.
 set -eu
@@ -31,12 +31,12 @@ for c in python3 python; do
 done
 
 if [ -z "$PY" ]; then
-  die "LocalML needs Python 3.10 or newer, which wasn't found on your PATH.
+  die "InferML needs Python 3.10 or newer, which wasn't found on your PATH.
 
 Install Python first - https://www.python.org/downloads/
 (or via your package manager: brew install python  /  sudo apt install python3)
 
-then re-run:  curl -fsSL https://www.localml.tech/install.sh | sh"
+then re-run:  curl -fsSL https://inferml.vercel.app/install.sh | sh"
 fi
 info "Using $("$PY" --version 2>&1) ($(command -v "$PY"))"
 
@@ -48,18 +48,18 @@ if ! "$PY" -m pipx --version >/dev/null 2>&1; then
   "$PY" -m pipx ensurepath >/dev/null 2>&1 || true
 fi
 
-# --- install LocalML (server only; the app installs the CPU/GPU stack on first
+# --- install InferML (server only; the app installs the CPU/GPU stack on first
 #     launch, so we don't pull torch here) --------------------------------------
-info "Installing the LocalML server..."
+info "Installing the InferML server..."
 "$PY" -m pipx install inferml \
   || die "Install failed. See the output above."
 
 printf '\n'
-ok "LocalML is installed."
+ok "InferML is installed."
 printf '\n'
 info "Start it with:"
-printf '    %slocalml%s\n' "${GRN}" "${RST}"
+printf '    %sinferml%s\n' "${GRN}" "${RST}"
 info "then open http://localhost:11500 in your browser."
 info "On first launch, pick CPU or GPU to install the model runtime (PyTorch + transformers)."
 printf '\n'
-warn "If the 'localml' command isn't found, open a new terminal - pipx just updated your PATH."
+warn "If the 'inferml' command isn't found, open a new terminal - pipx just updated your PATH."

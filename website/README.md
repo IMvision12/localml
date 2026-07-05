@@ -1,4 +1,4 @@
-# LocalML website
+# InferML website
 
 Static landing page. No framework, no build step - just open `index.html` in a browser.
 
@@ -12,7 +12,7 @@ website/
 ├── install.sh         # macOS/Linux installer  (curl -fsSL .../install.sh | sh)
 ├── install.ps1        # Windows installer       (irm .../install.ps1 | iex)
 ├── assets/
-│   └── favicon.svg    # LocalML constellation mark
+│   └── favicon.svg    # InferML constellation mark
 └── README.md          # this file
 ```
 
@@ -23,9 +23,9 @@ the landing page can advertise a one-liner:
 
 ```
 # Windows
-irm https://www.localml.tech/install.ps1 | iex
+irm https://inferml.vercel.app/install.ps1 | iex
 # macOS / Linux
-curl -fsSL https://www.localml.tech/install.sh | sh
+curl -fsSL https://inferml.vercel.app/install.sh | sh
 ```
 
 Each script **requires an existing Python 3.10+** (it does *not* install Python -
@@ -34,7 +34,7 @@ pipx and runs `pipx install inferml` (server only). The inference stack
 (PyTorch + transformers) is installed **inside the app** on first launch, once
 the user picks CPU or GPU - so the script stays fast and hardware-agnostic.
 
-> The scripts and the page hard-code `https://www.localml.tech`. If you deploy to a
+> The scripts and the page hard-code `https://inferml.vercel.app`. If you deploy to a
 > different domain, find-and-replace that host in `install.sh`, `install.ps1`,
 > and `index.html` (hero command, the `#install` one-liners, and `script.js`'s
 > Windows override). Serving over **HTTPS** is required for `| iex` / `| sh`.

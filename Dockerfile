@@ -1,15 +1,15 @@
-# LocalML - local web server with an OpenAI-compatible API.
+# InferML - local web server with an OpenAI-compatible API.
 #
 # Two stages: build the self-contained frontend with Node, then install the
 # Python package (server + inference extra) into a slim runtime image. No
 # Electron, no native binary.
 #
-#   docker build -t localml .
-#   docker run --rm -p 11500:11500 localml
-#   # GPU: docker run --rm --gpus all -p 11500:11500 localml
+#   docker build -t inferml .
+#   docker run --rm -p 11500:11500 inferml
+#   # GPU: docker run --rm --gpus all -p 11500:11500 inferml
 #
 # Model weights download to the HF cache at runtime; mount a volume to persist:
-#   docker run --rm -p 11500:11500 -v localml-hf:/root/.cache/huggingface localml
+#   docker run --rm -p 11500:11500 -v inferml-hf:/root/.cache/huggingface inferml
 
 # ---- stage 1: build the frontend ----
 FROM node:20-slim AS webui
@@ -27,7 +27,7 @@ FROM python:3.11-slim
 WORKDIR /app
 ENV PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1 \
-    LOCALML_DATA_DIR=/data
+    INFERML_DATA_DIR=/data
 
 COPY pyproject.toml MANIFEST.in README.md LICENSE ./
 COPY python ./python
@@ -41,4 +41,4 @@ RUN pip install ".[inference]"
 
 EXPOSE 11500
 VOLUME ["/data"]
-CMD ["localml", "--host", "0.0.0.0", "--no-browser"]
+CMD ["inferml", "--host", "0.0.0.0", "--no-browser"]

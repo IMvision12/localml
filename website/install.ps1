@@ -1,12 +1,12 @@
-# LocalML installer (Windows / PowerShell)
+# InferML installer (Windows / PowerShell)
 #
-#   irm https://www.localml.tech/install.ps1 | iex
+#   irm https://inferml.vercel.app/install.ps1 | iex
 #
-# Installs the `localml` command via pipx. LocalML is a Python app, so it needs
+# Installs the `inferml` command via pipx. InferML is a Python app, so it needs
 # an existing Python 3.10+ - this script does NOT install Python. If Python is
 # missing (or too old) it stops and tells you where to get it.
 
-function Install-LocalML {
+function Install-InferML {
   # Native tools (pip / pipx) routinely print to stderr - pipx's version probe
   # emits "No module named pipx", pip emits PATH warnings. In Windows PowerShell
   # 5.1, if the caller's session has $ErrorActionPreference = 'Stop', that stderr
@@ -30,12 +30,12 @@ function Install-LocalML {
 
   if (-not $py) {
     Write-Host @'
-LocalML needs Python 3.10 or newer, which wasn't found on your PATH.
+InferML needs Python 3.10 or newer, which wasn't found on your PATH.
 
 Install Python first - https://www.python.org/downloads/
 (tick "Add python.exe to PATH" in the installer), then re-run:
 
-    irm https://www.localml.tech/install.ps1 | iex
+    irm https://inferml.vercel.app/install.ps1 | iex
 '@ -ForegroundColor Red
     return
   }
@@ -45,26 +45,32 @@ Install Python first - https://www.python.org/downloads/
   & $py -m pipx --version *> $null
   if ($LASTEXITCODE -ne 0) {
     Info 'Installing pipx...'
-    & $py -m pip install --user pipx 2>&1
+    # Stream pip's output (stdout + stderr) as plain text. Windows PowerShell
+    # 5.1 otherwise renders native stderr - even benign progress lines - as red
+    # NativeCommandError records; piping through Write-Host keeps it plain.
+    & $py -m pip install --user pipx 2>&1 | ForEach-Object { Write-Host "$_" }
     if ($LASTEXITCODE -ne 0) { Write-Host "Couldn't install pipx. Try:  $py -m pip install --user pipx" -ForegroundColor Red; return }
     & $py -m pipx ensurepath *> $null
   }
 
-  # --- install LocalML (server only; the app installs the CPU/GPU stack on first
+  # --- install InferML (server only; the app installs the CPU/GPU stack on first
   #     launch, so we don't pull torch here) --------------------------------------
-  Info 'Installing the LocalML server...'
-  & $py -m pipx install inferml 2>&1
+  Info 'Installing the InferML server...'
+  # Stream pipx's output (stdout + stderr) as plain text - pipx prints
+  # "creating virtual environment..." to stderr, which PowerShell 5.1 would
+  # otherwise show as a red error even on a successful install.
+  & $py -m pipx install inferml 2>&1 | ForEach-Object { Write-Host "$_" }
   if ($LASTEXITCODE -ne 0) { Write-Host 'Install failed. See the output above.' -ForegroundColor Red; return }
 
   Write-Host ''
-  Ok 'LocalML is installed.'
+  Ok 'InferML is installed.'
   Write-Host ''
   Info 'Start it with:'
-  Write-Host '    localml' -ForegroundColor Green
+  Write-Host '    inferml' -ForegroundColor Green
   Info 'then open http://localhost:11500 in your browser.'
   Info 'On first launch, pick CPU or GPU to install the model runtime (PyTorch + transformers).'
   Write-Host ''
-  Warn "If the 'localml' command isn't found, open a new terminal - pipx just updated your PATH."
+  Warn "If the 'inferml' command isn't found, open a new terminal - pipx just updated your PATH."
 }
 
-Install-LocalML
+Install-InferML

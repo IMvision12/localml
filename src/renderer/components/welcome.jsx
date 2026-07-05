@@ -4,7 +4,7 @@ function Welcome({ onStart, version }) {
       <div className="welcome-bg"/>
       <div className="welcome-inner">
         <Logo size={80}/>
-        <div className="welcome-eyebrow">LocalML · v{version || '0.1.0'}</div>
+        <div className="welcome-eyebrow">InferML · v{version || '0.1.0'}</div>
         <h1 className="welcome-h1">
           Open-source ML.<br/>
           <span className="accent">Ready to run.</span>
