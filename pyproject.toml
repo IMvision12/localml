@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inferml"
-version = "1.0.4"
+version = "1.1.0"
 description = "Any HuggingFace model. Local. Multi-modal. Served over an OpenAI-compatible API."
 readme = "README.md"
 requires-python = ">=3.10"

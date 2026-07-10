@@ -82,6 +82,8 @@ Media inputs are local file paths. Generated images and audio are written to
 inline so the model can see what it made. Point at a non-default server with
 `--url` or `INFERML_URL`.
 
+Full guide, including Claude Desktop setup and troubleshooting: [MCP.md](MCP.md).
+
 ## Docker
 
 ```bash
