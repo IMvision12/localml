@@ -61,6 +61,27 @@ client.chat.completions.create(
 Supports streaming (`stream=True`), `GET /v1/models`, and tool/function calling
 for the Qwen/Hermes, Llama, and Mistral families.
 
+## MCP server
+
+Give Claude (or any MCP client) direct access to your local models. The MCP
+server talks to a running InferML over HTTP, so it shares the same warm models
+as the browser UI instead of loading a second copy.
+
+```bash
+pipx install "inferml[mcp]"
+inferml --no-browser        # terminal 1: the model server
+claude mcp add inferml -- inferml-mcp
+```
+
+Tools: `detect_objects`, `segment_image`, `generate_image`, `transcribe_audio`,
+`text_to_speech`, `generate_text`, `embed_text`, plus `search_models`,
+`download_model`, `list_models`, and `inferml_status`.
+
+Media inputs are local file paths. Generated images and audio are written to
+`~/inferml-outputs` (override with `--output-dir`); images are also returned
+inline so the model can see what it made. Point at a non-default server with
+`--url` or `INFERML_URL`.
+
 ## Docker
 
 ```bash

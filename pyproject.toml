@@ -27,6 +27,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# `pipx install "inferml[mcp]"` adds the `inferml-mcp` stdio server, which
+# exposes the running InferML instance to Claude and other MCP clients.
+mcp = [
+  "mcp>=1.2",
+  "httpx>=0.27",
+]
 inference = [
   "transformers>=5.7.0",
   "torch>=2.6",
@@ -47,6 +53,7 @@ inference = [
 
 [project.scripts]
 inferml = "server.cli:main"
+inferml-mcp = "mcp_server.server:main"
 
 [project.urls]
 Homepage = "https://github.com/IMvision12/InferML"
@@ -60,7 +67,7 @@ py-modules = ["engine", "routing", "io_utils", "output_kinds", "embedding_backen
 
 [tool.setuptools.packages.find]
 where = ["python"]
-include = ["server*", "adapters*", "tasks*", "models*", "plugins*"]
+include = ["server*", "adapters*", "tasks*", "models*", "plugins*", "mcp_server*"]
 
 [tool.setuptools.package-data]
 # Per-family JSON + the compiled frontend and routing tables bundled inside the
