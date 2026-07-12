@@ -8,8 +8,8 @@
  * the rest of the app is unaffected.
  *
  * The venv lives under userData, is owned entirely by the app, and is where the
- * onboarding screen's torch install lands - the server runs *inside* it, so
- * `/api/setup` (which pips into sys.executable) targets it with no changes.
+ * onboarding screen's torch install lands - runner.py runs *inside* it, so the
+ * setup op (which pips into sys.executable) targets it with no changes.
  */
 'use strict';
 
@@ -19,20 +19,28 @@ const path = require('path');
 
 const MIN_PYTHON = [3, 10];
 
-// The light server layer only. torch/transformers are installed later, into
-// this same venv, by the onboarding screen (POST /api/setup).
+// What the engine needs to answer its first request. Deliberately small: this is
+// installed synchronously on first launch, while the user watches a progress
+// bar, so anything in here is time they spend staring at a spinner.
+//
+// The heavy stack (torch, transformers, diffusers) is NOT here - it's gigabytes,
+// it depends on a CPU/GPU choice we haven't asked for yet, and it's installed
+// later into this same venv by the onboarding screen.
+//
+// The app itself does not speak HTTP - it drives the engine over stdio. fastapi
+// and uvicorn are here for the *optional* local API (python/api/), and mcp/httpx
+// for the MCP server that talks to it. They're a few MB and they have to be
+// present before the user can flip the setting on, so they ship in the base venv
+// rather than being installed on demand.
 const SERVER_DEPS = [
-  'fastapi>=0.110',
+  'huggingface_hub',            // model search + downloads
+  'platformdirs>=4',            // data dir resolution
+  'psutil>=5.9',                // hardware sampling
+  'fastapi>=0.110',             // the optional /v1 API
   'uvicorn[standard]>=0.29',
-  'python-multipart>=0.0.9',
-  'huggingface_hub',
-  'platformdirs>=4',
-  'psutil>=5.9',
-  // The MCP server used to be a `pipx install "inferml[mcp]"` extra. With PyPI
-  // dropped there is no extra to install, so it ships in the base venv and is
-  // launched straight from the app's python.
-  'mcp>=1.2',
-  'httpx>=0.27',
+  'python-multipart>=0.0.9',    // /v1/audio/transcriptions takes a file upload
+  'mcp>=1.2',                   // the MCP server
+  'httpx>=0.27',                // ...which is an HTTP client of the API above
 ];
 
 // Ask a candidate interpreter what it actually is. A candidate that isn't real
@@ -114,11 +122,19 @@ function venvPython(userData) {
     : path.join(dir, 'bin', 'python');
 }
 
-/** True once the venv exists AND the server layer is importable from it. */
+/**
+ * True once the venv exists AND runner.py's dependencies are importable from it.
+ *
+ * This must stay in step with SERVER_DEPS. It probes for what the engine needs
+ * *today* - not what it needed when the venv was built - which is what makes the
+ * venv self-repairing: an install carried over from the FastAPI era fails this
+ * check, and boot rebuilds it instead of starting an engine that would die on
+ * its first import.
+ */
 function isVenvReady(userData) {
   const py = venvPython(userData);
   if (!fs.existsSync(py)) return false;
-  const r = spawnSync(py, ['-c', 'import fastapi, uvicorn, huggingface_hub'], {
+  const r = spawnSync(py, ['-c', 'import huggingface_hub, platformdirs, psutil, fastapi, uvicorn, mcp, httpx'], {
     encoding: 'utf8',
     timeout: 20000,
     windowsHide: true,

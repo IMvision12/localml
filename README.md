@@ -7,9 +7,9 @@
 Any Hugging Face model. Local. Multi-modal. A **desktop app** - download it and
 run models on your own machine.
 
-Run 143+ model families fully on-device (LLMs, VLMs, diffusion, ASR, TTS,
-segmentation, detection), and point agent frameworks (LangChain, LangGraph, the
-OpenAI SDK) at it the way you point them at Ollama.
+Run 143+ model families fully on-device: LLMs, VLMs, diffusion, ASR, TTS,
+segmentation, detection. Nothing listens on the network, nothing leaves your
+machine.
 
 ## Install
 
@@ -70,20 +70,27 @@ folder, and nothing is sent anywhere.
 ## Lives in your tray
 
 InferML sits in the system tray (menu bar on macOS). **Closing the window doesn't
-quit it** - the server, your loaded models, and the API keep running, so
-`localhost:11500` is simply always there. Getting the window back is one click.
+quit it** - the engine and every model you've loaded stay resident, so reopening
+is instant instead of paying the load again. Getting the window back is one click.
 
-The tray menu has: **Open InferML**, **Copy API base URL**, **Launch at login**,
-and **Quit InferML**. Quit is the only thing that actually stops the server and
-frees the memory your models are holding.
+The tray menu has: **Open InferML**, **Launch at login**, and **Quit InferML**.
+Quit is the only thing that actually stops the engine and frees the memory your
+models are holding.
 
-Turn on *Launch at login* and the API is up before you ever open the app.
+## The app itself never uses a port
+
+The window is a local file and the Python engine is a child process Electron
+talks to over stdin/stdout. Nothing is served, so **the InferML interface can
+never be opened in a browser** - there is no URL that returns it.
+
+That stays true even with the API below switched on. The API serves `/v1` and
+nothing else; a browser pointed at it gets a 404.
 
 ## OpenAI-compatible API
 
-InferML serves an OpenAI-compatible API on `http://localhost:11500/v1` (any api
-key) for as long as it's running - window open or not. It routes to whichever LLM
-is currently loaded.
+Off by default. Turn it on in **Settings → API & MCP**, and InferML serves an
+OpenAI-compatible API on `http://localhost:11500/v1` (any api key). It routes to
+whichever LLM is loaded, or lazy-loads the one you name.
 
 ```python
 from openai import OpenAI
@@ -94,47 +101,43 @@ client.chat.completions.create(
 )
 ```
 
-Supports streaming (`stream=True`), `GET /v1/models`, and tool/function calling
-for the Qwen/Hermes, Llama, and Mistral families.
+Supports streaming (`stream=True`), `GET /v1/models`, embeddings, audio, images,
+and tool/function calling for the Qwen/Hermes, Llama and Mistral families.
 
-> If port 11500 is already taken, InferML falls back to another port and the
-> base URL changes - close the other instance to keep `11500` stable.
+It runs inside the engine process, so it shares the models the app already has
+warm rather than loading a second copy. Because the app is tray-resident, the API
+stays up with the window closed.
+
+> **What it is:** a loopback-only listener with no CORS headers and no
+> credential routes. **What it isn't:** authenticated. Any program running as you
+> can use it while it's on - the same trade Ollama makes. That's why it's a
+> switch rather than something always listening.
 
 ## MCP server
 
-Give Claude (or any MCP client) direct access to your local models. The MCP
-server talks to the running InferML app over HTTP, so it shares the same warm
-models as the app window instead of loading a second copy.
+Gives Claude direct access to your local models. It's an HTTP client of the API
+above, so **turn the API on first**.
 
-The app writes a launcher into its data folder on every launch. Register it with:
+Copy the exact command from **Settings → API & MCP**, or:
+
+```powershell
+# Windows
+claude mcp add inferml -- "$env:APPDATA\InferML\venv\Scripts\python.exe" "$env:APPDATA\InferML\inferml-mcp.py"
+```
 
 ```bash
 # macOS
 claude mcp add inferml -- \
   "$HOME/Library/Application Support/InferML/venv/bin/python" \
   "$HOME/Library/Application Support/InferML/inferml-mcp.py"
-
-# Linux
-claude mcp add inferml -- \
-  "$HOME/.config/InferML/venv/bin/python" \
-  "$HOME/.config/InferML/inferml-mcp.py"
 ```
 
-```powershell
-# Windows (PowerShell)
-claude mcp add inferml -- "$env:APPDATA\InferML\venv\Scripts\python.exe" "$env:APPDATA\InferML\inferml-mcp.py"
-```
-
-Keep the InferML app running while you use these tools.
+The app rewrites that launcher on every boot, so it survives updates.
 
 Tools: `detect_objects`, `segment_image`, `generate_image`, `transcribe_audio`,
 `text_to_speech`, `generate_text`, `embed_text`, plus `search_models`,
-`download_model`, `list_models`, and `inferml_status`.
-
-Media inputs are local file paths. Generated images and audio are written to
-`~/inferml-outputs`; images are also returned inline so the model can see what it
-made. Full guide, including Claude Desktop setup and troubleshooting:
-[MCP.md](MCP.md).
+`download_model`, `list_models` and `inferml_status`. Keep InferML running while
+you use them.
 
 ## Updating
 
@@ -153,21 +156,18 @@ That leaves your settings and downloaded weights on disk. To wipe those too:
 # macOS
 rm -rf ~/Library/Application\ Support/InferML   # env, settings, chats, HF token
 rm -rf ~/.cache/huggingface                     # downloaded models (GBs)
-rm -rf ~/inferml-outputs                        # MCP-generated images/audio
 ```
 
 ```bash
 # Linux
 rm -rf ~/.config/InferML
 rm -rf ~/.cache/huggingface
-rm -rf ~/inferml-outputs
 ```
 
 ```powershell
 # Windows (PowerShell)
 Remove-Item -Recurse -Force "$env:APPDATA\InferML"
 Remove-Item -Recurse -Force "$env:USERPROFILE\.cache\huggingface"
-Remove-Item -Recurse -Force "$env:USERPROFILE\inferml-outputs"
 ```
 
 The Hugging Face cache is **shared with every other HF tool** on the machine, so
@@ -177,11 +177,15 @@ delete those locations instead.
 
 ## Development
 
-The app is an Electron shell (`src/main/`) around the Python server
-(`python/`). The shell finds a Python, builds a venv in its data folder, starts
-the FastAPI server on a loopback port, and points its window at it - so the React
-UI in `src/renderer/` is served over HTTP and talks to the backend through
-`window.inferml` (`src/renderer/web-bridge.js`), exactly as it would in a browser.
+The app is an Electron shell (`src/main/`) around a Python engine (`python/`).
+The shell finds a Python, builds a venv in its data folder, and spawns
+`python/runner.py` as a child process - then talks to it in newline-delimited
+JSON over stdin/stdout. Nothing binds a port.
+
+The React UI in `src/renderer/` is loaded from disk with `loadFile()`, runs with
+no node integration, and reaches the engine only through `window.inferml`, which
+`src/main/preload.js` defines over IPC. If a capability isn't on that object, the
+UI doesn't have it.
 
 ```bash
 npm install
@@ -193,9 +197,12 @@ Useful pieces:
 | Path | What it is |
 | --- | --- |
 | `src/main/main.js` | boot sequence + window/tray lifecycle |
+| `src/main/python-runner.js` | spawns the engine, JSON over stdin/stdout |
+| `src/main/ipc.js` | every operation the UI is allowed to invoke |
+| `src/main/preload.js` | defines `window.inferml` - the renderer's only door out |
 | `src/main/python-env.js` | Python discovery + the app-managed venv |
-| `src/main/sidecar.js` | starts/stops the FastAPI server |
 | `src/main/tray.js` | tray icon, close-to-tray, launch at login |
+| `python/runner.py` | the stdio protocol + dispatch table |
 | `python/engine.py` | adapter cache, run/download/unload |
 | `python/routing.py` | picks an adapter for a model |
 | `python/models/<family>/` | one folder per model family (144 of them) |
@@ -211,6 +218,12 @@ npm run dist:win     # or dist:mac / dist:linux  → dist-app/
 > on `Cannot create symbolic link` - Windows won't let a normal user create
 > symlinks. CI is unaffected.
 
-The server is not a standalone web app: it binds loopback only, has no
-authentication, and is started by the shell. Run it directly (`python -m
-server.cli --port 11500`) only to debug the backend.
+To poke at the engine without the UI, talk to it the way Electron does - it reads
+one JSON object per line on stdin and answers on stdout:
+
+```bash
+cd python
+echo '{"id":"1","type":"hf.search","q":"detr"}' | python -u runner.py
+```
+
+`runner.py`'s `OPS` table is the complete list of what it can do.

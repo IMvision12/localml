@@ -5,9 +5,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const TARGETS = [
-  'dist', 'out', 'release', '.cache',
+  'dist', 'out', 'release', '.cache', 'dist-app',
   'src/renderer/dist',
-  'python/server/webui', 'python/server/_data',
 ];
 
 (async () => {

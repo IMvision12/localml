@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from server.appdata import hf_token_file, read_json, write_json
+from services.appdata import hf_token_file, read_json, write_json
 
 _PY_DIR = Path(__file__).resolve().parents[1]
 _SERVER_DIR = Path(__file__).resolve().parent
@@ -202,7 +202,7 @@ def search(q=None, task=None) -> dict:
 
     merged = sorted(by_id.values(), key=lambda m: -(m.get("downloads") or 0))
 
-    from server.store_service import list_installed
+    from services.store_service import list_installed
     installs = list_installed()
 
     items = []

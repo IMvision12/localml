@@ -1,4 +1,4 @@
-"""Windows compatibility patches applied process-wide at sidecar boot.
+"""Windows compatibility patches applied process-wide at engine boot.
 
 Currently:
 - os.symlink → transparent copy fallback when the caller lacks

@@ -58,14 +58,18 @@ function generateHtml() {
     '<script src="$1.js"></script>',
   );
 
-  // Vendor the browser runtime deps (react, react-dom, marked, dompurify) so
-  // the built frontend is self-contained and needs no node_modules at runtime
-  // - required for the Node-free `pipx install inferml` web server. Each
-  // `../../node_modules/<pkg>/<path>/<file>` script src is rewritten to
-  // `/vendor/<file>`, and the files themselves are copied by copyVendorAssets().
+  // Vendor the browser runtime deps (react, react-dom, marked, dompurify) so the
+  // built frontend is self-contained and doesn't reach into node_modules, which
+  // isn't shipped. Each `../../node_modules/<pkg>/<path>/<file>` script src is
+  // rewritten to `vendor/<file>`, and the files are copied by copyVendorAssets().
+  //
+  // The path MUST stay relative. This used to emit `/vendor/<file>`, which was
+  // fine when a server was serving the page - but the app loads the UI straight
+  // off disk now (file://), and there a leading slash resolves to the root of
+  // the filesystem. React would 404, and the window would come up blank.
   html = html.replace(
     /(["'])\.\.\/\.\.\/node_modules\/[^"']*\/([^"'\/]+)(["'])/g,
-    '$1/vendor/$2$3',
+    '$1vendor/$2$3',
   );
 
   // Tighten CSP: drop 'unsafe-eval'. Anything else stays.
@@ -79,7 +83,7 @@ function generateHtml() {
 // aren't transformed (CSS, fonts, anything dropped into src/renderer/).
 function copyStaticAssets() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  for (const name of ['styles.css', 'web-bridge.js']) {
+  for (const name of ['styles.css']) {
     const src = path.join(RENDERER_DIR, name);
     if (fs.existsSync(src)) {
       fs.copyFileSync(src, path.join(OUT_DIR, name));

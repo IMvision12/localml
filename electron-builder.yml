@@ -4,11 +4,11 @@
 #   macOS    InferML-<v>-{arm64,x64}.dmg    (+ .zip, required by electron-updater)
 #   Linux    InferML-<v>.AppImage, .deb     (x64)
 #
-# What ships inside: the Electron shell + the `python/` source tree (engine,
-# FastAPI server, and the compiled web UI that `npm run build` bundles into
-# python/server/webui). What does NOT ship: a Python interpreter, torch, or any
-# model weights. The app finds the user's Python, builds a venv under userData,
-# and the onboarding screen installs the inference stack into it on first run.
+# What ships inside: the Electron shell, the compiled renderer, and the `python/`
+# source tree (the engine + runner.py, which Electron drives over stdio). What
+# does NOT ship: a Python interpreter, torch, or any model weights. The app finds
+# the user's Python, builds a venv under userData, and the onboarding screen
+# installs the inference stack into it on first run.
 
 appId: app.inferml
 productName: InferML
@@ -21,10 +21,16 @@ directories:
   # the two never fight.
   buildResources: assets
 
-# The renderer is NOT listed here: it is served to the window by the Python
-# server out of python/server/webui, so it travels with extraResources instead.
+# The renderer has to be in here now. It used to be served to the window over
+# HTTP out of python/server/webui, so it rode along in extraResources; there is
+# no server any more and main.js loads it straight off disk with loadFile(), so
+# it ships inside the asar like any other app code.
+#
+# Only `dist/` - the pre-compiled output. The sources (.jsx, and the dev
+# index.html that pulls Babel out of node_modules) are useless in a packaged app.
 files:
   - src/main/**/*
+  - src/renderer/dist/**/*
   - package.json
   - "!**/node_modules/*/{test,__tests__,tests,example,examples,doc,docs}/**"
 

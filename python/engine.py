@@ -1,15 +1,15 @@
 """InferML inference engine - the reusable core.
 
-Holds all model-loading and inference logic, driven in-process by the FastAPI
-web server (`server/`). Running in-process is what lets the OpenAI-compatible
-endpoint hold a live handle to the currently-loaded LLM and stream tokens from
-it.
+Holds all model-loading and inference logic. Driven in-process by `runner.py`,
+which is the stdio bridge the Electron app spawns; keeping the engine in that
+same process is what lets a loaded model stay warm across requests instead of
+being re-loaded per call.
 
 Design invariants:
   - One model = one loaded pipeline. Adapter instances are cached by
     (adapter_class_name, model_id); a second request reuses the loaded model.
   - Inference is NOT thread-safe against itself (torch). Callers serialize.
-    The server runs `run()`/`download()` in a threadpool behind a single lock.
+    `runner.py` runs `run()`/`download()` on a thread pool behind a single lock.
 """
 from __future__ import annotations
 
@@ -61,9 +61,7 @@ class Engine:
         """Execute one inference. Returns an `output_kinds` dict.
 
         Overrides merge under request params, the model is inspected + routed,
-        the adapter is loaded (or reused) and invoked. Records the model as the
-        current LLM when it's a text generator so the OpenAI endpoint can find
-        it.
+        and the adapter is loaded (or reused) and invoked.
         """
         if not model_id:
             raise ValueError("Missing 'modelId' - the session isn't bound to a model")
@@ -80,6 +78,9 @@ class Engine:
 
         out = adapter.run(inputs, merged_params)
 
+        # Remember the last text generator we ran. `/v1/chat/completions` with no
+        # explicit `model` routes here - "whichever LLM is loaded" is what makes
+        # InferML a drop-in for Ollama in an OpenAI client.
         if _is_text_generation(info, task, out):
             self._current_llm_id = model_id
         return out
@@ -104,8 +105,8 @@ class Engine:
     def ensure_loaded(self, model_id: str, task: str | None = None):
         """Load a model without running inference and return its adapter.
 
-        Used by the OpenAI endpoint to lazy-load a model named in the request
-        body when it isn't resident yet.
+        Lets the API lazy-load a model named in a request body when it isn't
+        resident yet, instead of erroring.
         """
         cached = self.get_cached_adapter(model_id)
         if cached is not None:

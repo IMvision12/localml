@@ -1,18 +1,17 @@
 /**
  * System tray / menu bar presence.
  *
- * This is what turns InferML from "an app you launch" into "a service that's
- * there" - the Ollama model. Closing the window hides it; the server, the loaded
- * models, and the OpenAI-compatible API keep running behind the tray icon. Quit
- * is an explicit act, because quitting drops multi-GB models out of memory and
- * kills an API that other processes may be talking to.
+ * Closing the window hides it; the engine and every model it has loaded stay
+ * resident behind the tray icon, so reopening is instant instead of paying the
+ * multi-second load again. Quit is the only thing that actually stops it, and it
+ * is an explicit act because it drops multi-GB models out of memory.
  *
  * The menu is rebuilt on demand rather than kept in sync with a live handle, so
  * the status line can't drift from reality.
  */
 'use strict';
 
-const { app, Menu, Tray, clipboard, nativeImage } = require('electron');
+const { app, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 
 let tray = null;
@@ -33,32 +32,27 @@ function trayImage() {
 
 /**
  * @param {object} o
- * @param {() => void}    o.onOpen    show/focus the main window
- * @param {() => void}    o.onQuit    really quit (stops the sidecar)
- * @param {() => string?} o.getUrl    the server's base URL, or null while booting
+ * @param {() => void}    o.onOpen      show/focus the main window
+ * @param {() => void}    o.onQuit      really quit (stops the engine)
+ * @param {() => boolean} o.isRunning   whether the Python engine is up
  */
-function createTray({ onOpen, onQuit, getUrl }) {
+function createTray({ onOpen, onQuit, isRunning }) {
   if (tray) return tray;
 
   tray = new Tray(trayImage());
   tray.setToolTip('InferML');
 
   const rebuild = () => {
-    const url = getUrl();
+    const running = isRunning();
     const openAtLogin = app.getLoginItemSettings().openAtLogin;
 
     tray.setContextMenu(Menu.buildFromTemplate([
       {
-        label: url ? `InferML - running on ${url.replace('http://', '')}` : 'InferML - starting...',
+        label: running ? 'InferML - engine running' : 'InferML - starting...',
         enabled: false,
       },
       { type: 'separator' },
       { label: 'Open InferML', click: onOpen },
-      {
-        label: 'Copy API base URL',
-        enabled: !!url,
-        click: () => { if (url) clipboard.writeText(`${url}/v1`); },
-      },
       { type: 'separator' },
       {
         label: 'Launch at login',

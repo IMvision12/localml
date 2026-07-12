@@ -36,22 +36,10 @@ jobs:
         with:
           fetch-depth: 0   # need existing tags to compare against
 
-      # The version lives in two places: package.json drives the release, the
-      # installer filenames and the auto-updater; server/__init__.py is what the
-      # running app reports at /api/health and in the UI. Nothing keeps them in
-      # step, so a drifted pair would ship an app that lies about its version.
-      # Fail loudly here rather than find out after publishing.
-      - name: Check version consistency
-        run: |
-          version=$(node -p "require('./package.json').version")
-          py_version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' python/server/__init__.py)
-          echo "package.json            : $version"
-          echo "python/server/__init__.py: $py_version"
-          if [ "$version" != "$py_version" ]; then
-            echo "::error::Version mismatch - package.json says '$version' but python/server/__init__.py says '$py_version'. Bump both."
-            exit 1
-          fi
-
+      # package.json is now the only place a version lives. The Python side used
+      # to carry its own __version__ (it was a pip-installable server that
+      # reported one at /api/health); it is a child process of the app now, so
+      # the app tells it, and there is nothing left to drift.
       - id: decide
         run: |
           version=$(node -p "require('./package.json').version")
@@ -128,8 +116,8 @@ jobs:
 
       - run: npm ci
 
-      # Compiles the React renderer and bundles it into python/server/webui,
-      # which extraResources then ships inside the app.
+      # Compiles the React renderer to src/renderer/dist, which electron-builder
+      # packs into the asar. main.js loads it from there with loadFile().
       - run: npm run build
 
       - name: Build and upload installers

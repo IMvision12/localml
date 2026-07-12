@@ -37,7 +37,7 @@ def resolve_media_model(requested: str | None, tasks: tuple, fallback: str | Non
     if name and name.lower() not in GENERIC_NAMES:
         return name
     try:
-        from server.store_service import list_installed
+        from services.store_service import list_installed
         for mid, meta in list_installed().items():
             if (meta or {}).get("task") in tasks:
                 return mid
@@ -55,7 +55,7 @@ def installed_task(model_id: str) -> str | None:
     """The task the user installed this model under, if any - used as the
     routing hint when the Hub metadata lookup can't supply a pipeline_tag."""
     try:
-        from server.store_service import list_installed
+        from services.store_service import list_installed
         return (list_installed().get(model_id) or {}).get("task") or None
     except Exception:
         return None

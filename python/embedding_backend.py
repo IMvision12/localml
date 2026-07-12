@@ -1,12 +1,7 @@
 """Shared text-embedding core.
 
-Loads an embedding model and turns text into vectors. Used by two layers that
-must not depend on each other:
-
-  - the engine task `tasks/feature_extraction.py` (renders a `vector` output in
-    the UI), and
-  - the OpenAI-compatible `/v1/embeddings` endpoint
-    (`server/openai_api/embeddings.py`).
+Loads an embedding model and turns text into vectors, behind the engine task
+`tasks/feature_extraction.py` (which renders a `vector` output in the UI).
 
 It prefers sentence-transformers when installed - it reads each model's own
 pooling config, so bge / e5 / gte / MiniLM all come out right - and falls back

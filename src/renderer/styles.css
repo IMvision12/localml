@@ -113,17 +113,7 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .win { position: fixed; inset: 0; background: var(--bg-1); display: flex; }
 .win-frame { width: 100%; height: 100%; background: var(--bg-1); overflow: hidden; display: flex; flex-direction: column; position: relative; }
 
-.titlebar { height: 36px; flex-shrink: 0; background: var(--bg-2); border-bottom: 1px solid var(--line); display: flex; align-items: stretch; font-size: 12px; }
-.tb-brand { display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--fg-0); font-weight: 600; cursor: pointer; }
 
-.tb-crumbs { display: flex; align-items: center; gap: 6px; color: var(--fg-2); padding-left: 8px; min-width: 0; }
-.tb-crumb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tb-crumb.active { color: var(--fg-0); }
-.tb-crumb.clickable { cursor: pointer; }
-.tb-crumb.clickable:hover { color: var(--fg-0); }
-.tb-sep { color: var(--fg-3); font-family: var(--mono); flex-shrink: 0; }
-.tb-spacer { flex: 1; }
-.tb-actions { display: flex; align-items: center; gap: 4px; padding: 0 8px; flex-shrink: 0; }
 .tb-btn { height: 24px; padding: 0 10px; display: flex; align-items: center; gap: 6px; border-radius: 4px; color: var(--fg-1); font-size: 11px; }
 .tb-btn:hover { background: var(--bg-4); color: var(--fg-0); }
 
@@ -326,6 +316,22 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
   overflow: hidden;
 }
 .s-card-pad { padding: 16px; }
+
+/* Explanatory paragraph under a settings card, and the copy-pasteable command
+   block in the API & MCP section. */
+.s-note { font-size: 12px; line-height: 1.6; color: var(--fg-2); margin: 10px 2px 22px; }
+.s-code {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--fg-1);
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
 .s-row {
   display: flex; align-items: center;
   padding: 14px 18px;
@@ -442,61 +448,9 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .s-theme-preview.onedark .stp-r2  { background: #3a404b; width: 90%; }
 .s-theme-preview.onedark .stp-r3  { background: #3a404b; width: 50%; }
 
-.tb-pill { height: 22px; padding: 0 8px; display: flex; align-items: center; gap: 6px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 11px; font-family: var(--mono); font-size: 10.5px; color: var(--fg-1); }
-.tb-stats { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 10.5px; }
-.tb-stats .tb-stat { color: var(--fg-1); }
-.tb-stats .tb-sep { color: var(--fg-3); opacity: 0.5; }
-.tb-pill .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-.tb-pill.warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); color: var(--warn); }
-.tb-pill.warn .dot { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
 
-.tb-pill-warn {
-  background: color-mix(in oklab, var(--warn) 14%, var(--bg-3));
-  border: 1px solid color-mix(in oklab, var(--warn) 55%, var(--line));
-  color: var(--warn);
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  height: 22px; padding: 0 10px;
-  display: flex; align-items: center; gap: 6px;
-  border-radius: 11px;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-.tb-pill-warn:hover { background: color-mix(in oklab, var(--warn) 22%, var(--bg-3)); border-color: var(--warn); }
-.tb-pill-warn svg { color: var(--warn); }
 
-.tb-pill-info {
-  background: color-mix(in oklab, var(--accent) 12%, var(--bg-3));
-  border: 1px solid color-mix(in oklab, var(--accent) 50%, var(--line));
-  color: var(--accent);
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  height: 22px; padding: 0 10px;
-  display: flex; align-items: center; gap: 6px;
-  border-radius: 11px;
-}
-.tb-pill-info:hover { background: color-mix(in oklab, var(--accent) 20%, var(--bg-3)); border-color: var(--accent); }
-.tb-pill-info .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.4s ease-in-out infinite; }
 
-.tb-pill-update {
-  background: color-mix(in oklab, var(--ok) 14%, var(--bg-3));
-  border: 1px solid color-mix(in oklab, var(--ok) 55%, var(--line));
-  color: var(--ok);
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  height: 22px; padding: 0 10px;
-  display: flex; align-items: center; gap: 6px;
-  border-radius: 11px;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-.tb-pill-update:hover { background: color-mix(in oklab, var(--ok) 22%, var(--bg-3)); border-color: var(--ok); }
-.tb-pill-update svg { color: var(--ok); }
-.tb-win-controls { display: flex; flex-shrink: 0; }
-.tb-wc { width: 46px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--fg-1); }
-.tb-wc:hover { background: var(--bg-4); }
-.tb-wc.close:hover { background: #e81123; color: #fff; }
 
 .app-body { flex: 1; display: flex; min-height: 0; min-width: 0; }
 .sidebar { width: 260px; flex-shrink: 0; background: var(--bg-1); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
@@ -894,9 +848,6 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .tweaks-toggle button { padding: 4px 10px; font-size: 11px; border-radius: 3px; color: var(--fg-2); display: flex; align-items: center; gap: 4px; }
 .tweaks-toggle button.active { background: var(--bg-5); color: var(--fg-0); }
 
-.titlebar { -webkit-app-region: drag; }
-.titlebar .no-drag, .titlebar input, .titlebar button, .titlebar .tb-wc, .titlebar .tb-btn, .titlebar .tb-pill { -webkit-app-region: no-drag; }
-.tb-wc { cursor: pointer; }
 
 .chat-view { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--bg-1); }
 .chat-head { height: 48px; flex-shrink: 0; padding: 0 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); background: var(--bg-1); }

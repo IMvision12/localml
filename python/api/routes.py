@@ -15,12 +15,12 @@ import uuid
 from fastapi import APIRouter, Body, File, Form, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
-from server import deps
-from server.openai_api.llm import (
+import runtime as deps
+from api.llm import (
     LLMNotLoaded, resolve_llm, build_inputs, generate_full, stream_generate,
 )
-from server.openai_api.embeddings import embed, EmbeddingError
-from server.openai_api.media import (
+from api.embeddings import embed, EmbeddingError
+from api.media import (
     MediaError, resolve_media_model, installed_task,
     to_image_data_url, bytes_to_data_url, data_url_bytes, parse_size,
 )
@@ -52,7 +52,7 @@ async def list_models():
     if cur and cur not in ids:
         ids.append(cur)
     try:
-        from server.store_service import list_installed
+        from services.store_service import list_installed
         _servable = ("text-generation", "conversational",
                      "feature-extraction", "sentence-similarity",
                      "automatic-speech-recognition", "text-to-speech",
@@ -63,7 +63,7 @@ async def list_models():
                 ids.append(mid)
     except Exception:
         pass
-    from server.openai_api.embeddings import DEFAULT_EMBED_MODEL
+    from api.embeddings import DEFAULT_EMBED_MODEL
     if DEFAULT_EMBED_MODEL not in ids:
         ids.append(DEFAULT_EMBED_MODEL)
     created = _now()
@@ -343,7 +343,7 @@ async def chat_completions(payload: dict = Body(...)):
     message = {"role": "assistant", "content": text}
     finish = _finish_reason(ctoks, params)
     if tools:
-        from server.openai_api.tools import parse_tool_calls, ToolFormatUnknown
+        from api.tools import parse_tool_calls, ToolFormatUnknown
         try:
             tool_calls = parse_tool_calls(model_id, text)
         except ToolFormatUnknown as e:
@@ -389,7 +389,7 @@ async def _stream_response(eng, model_req, messages, tools, tool_choice, params)
                 yield _sse_error(rid, created, model_id, actionable_error(e))
                 yield "data: [DONE]\n\n"
                 return
-            from server.openai_api.tools import parse_tool_calls, ToolFormatUnknown
+            from api.tools import parse_tool_calls, ToolFormatUnknown
             try:
                 calls = parse_tool_calls(model_id, text)
             except ToolFormatUnknown as e:

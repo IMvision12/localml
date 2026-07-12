@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import time
 
-from server.appdata import (
+from services.appdata import (
     chats_dir, chat_file, settings_file, installs_file,
     read_json, write_json,
 )
-from server.events import HUB
+from services.events import HUB
 
 _PROTECTED_PATCH_FIELDS = {"id", "createdAt"}
 _METADATA_FIELDS = ["pinned"]

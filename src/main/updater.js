@@ -8,7 +8,7 @@
  *
  * The IPC surface here mirrors the shape the renderer's Settings screen already
  * consumes (`{ ok, hasUpdate, currentVersion, latestVersion, ... }`), so the UI
- * did not have to change - only where web-bridge.js routes the calls.
+ * did not have to change.
  *
  * Note this updates the *shell*, not the venv. The Python layer is shipped as
  * source inside the app bundle, so a new installer brings a new `python/` tree
@@ -21,11 +21,18 @@ const { app, ipcMain } = require('electron');
 
 let wired = false;
 
-function initUpdater(win) {
+/**
+ * @param getWin - resolves the current window *at send time*. Not a `win` value:
+ *   these handlers are registered once at startup, but the window is destroyed and
+ *   recreated whenever the user closes to the tray and reopens, so a captured
+ *   reference would go stale and download progress would vanish into a dead window.
+ */
+function initUpdater(getWin) {
   if (wired) return;
   wired = true;
 
   const send = (channel, payload) => {
+    const win = getWin();
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
   };
 

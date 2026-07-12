@@ -13,9 +13,13 @@
  *   claude mcp add inferml -- <userData>/venv/.../python <userData>/inferml-mcp.py
  *
  * `mcp` and `httpx` are in the base venv (see python-env.SERVER_DEPS), so the
- * launcher has everything it needs. The MCP server talks HTTP to the running
- * app, which is why it shares the app's already-warm models instead of loading
- * a second copy.
+ * launcher has everything it needs.
+ *
+ * The MCP server is an HTTP *client* of InferML's local API - that is what lets
+ * it reuse the models the app already has warm instead of loading a second
+ * multi-GB copy of each one. The consequence is that **MCP only works while the
+ * API is switched on** (Settings -> API server). With the API off there is
+ * nothing for it to connect to, and it will say so.
  */
 'use strict';
 

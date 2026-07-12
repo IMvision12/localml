@@ -243,7 +243,7 @@
     io.observe(el);
   });
   // Grid reveals with stagger
-  ['.feat-grid', '.model-families', '.downloads', '.oneliners', '.api-points'].forEach((gridSel) => {
+  ['.feat-grid', '.model-families', '.downloads', '.oneliners', '.api-points', '.mcp-tools'].forEach((gridSel) => {
     const cards = document.querySelectorAll(`${gridSel} > *`);
     cards.forEach((el, i) => {
       el.style.opacity = '0';

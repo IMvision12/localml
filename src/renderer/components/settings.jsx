@@ -33,6 +33,7 @@ function Settings({
     { id: 'general',    label: 'General',       icon: 'settings' },
     { id: 'appearance', label: 'Appearance',    icon: 'image' },
     { id: 'hardware',   label: 'Hardware',      icon: 'cpu' },
+    { id: 'api',        label: 'API & MCP',     icon: 'zap' },
     { id: 'hf',         label: 'HF Token',      icon: 'cube' },
   ];
   const active = sections.find(s => s.id === section) || sections[0];
@@ -66,6 +67,7 @@ function Settings({
             {section === 'general'    && <GeneralSection    version={version} hw={hw} pyStatus={pyStatus} refreshPyStatus={refreshPyStatus}/>}
             {section === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme}/>}
             {section === 'hardware'   && <HardwareSection   hw={hw} pyStatus={pyStatus} pySetup={pySetup} runSetup={runSetup} refreshPyStatus={refreshPyStatus}/>}
+            {section === 'api'        && <ApiSection/>}
             {section === 'hf'         && <HFSection/>}
           </div>
         </div>
@@ -422,6 +424,108 @@ function HardwareSection({ hw, pyStatus, pySetup, runSetup, refreshPyStatus }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ApiSection() {
+  const [st, setSt] = useStateS(null);
+  const [busy, setBusy] = useStateS(false);
+  const [mcp, setMcp] = useStateS('');
+  const [copied, setCopied] = useStateS(null);
+
+  const refresh = async () => {
+    try { setSt(await window.inferml?.api?.status()); } catch { setSt(null); }
+  };
+
+  useEffectS(() => {
+    refresh();
+    window.inferml?.api?.mcpCommand?.().then((r) => setMcp(r?.command || '')).catch(() => {});
+  }, []);
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      const next = st?.running
+        ? await window.inferml.api.stop()
+        : await window.inferml.api.start();
+      setSt(next);
+    } catch { /* the status row shows whatever state we end up in */ }
+    setBusy(false);
+    refresh();
+  };
+
+  const copy = (text, key) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1400);
+  };
+
+  const running = !!st?.running;
+  const base = st?.url ? `${st.url}/v1` : 'http://localhost:11500/v1';
+
+  return (
+    <div className="s-section">
+      <h3 className="s-h">Local API</h3>
+      <div className="s-card">
+        <Row
+          title="OpenAI-compatible API"
+          sub={running
+            ? 'Running. Other programs on this machine can drive your loaded models.'
+            : 'Off. Nothing is listening.'}
+          control={
+            <button className={`mc-btn ${running ? 'ghost danger' : 'primary'}`} onClick={toggle} disabled={busy}>
+              {busy ? '…' : running ? 'Turn off' : 'Turn on'}
+            </button>
+          }
+        />
+        {running && (
+          <Row
+            title="Base URL"
+            sub="Point LangChain or the OpenAI SDK here. Any api key works."
+            value={base}
+            control={
+              <button className="mc-btn ghost" onClick={() => copy(base, 'url')}>
+                {copied === 'url' ? 'Copied' : 'Copy'}
+              </button>
+            }
+          />
+        )}
+        {st?.error && (
+          <Row
+            title="Could not start"
+            sub={st.error.includes('address') || st.error.includes('10048')
+              ? 'Port 11500 is already in use - another InferML, or another app.'
+              : st.error}
+          />
+        )}
+      </div>
+      <p className="s-note">
+        The API binds to localhost only and is never reachable from your network. It does
+        not serve the InferML interface - a browser pointed at it gets nothing. It is
+        unauthenticated, though, so any program running as you can use it while it's on.
+      </p>
+
+      <h3 className="s-h">MCP server</h3>
+      <div className="s-card">
+        <Row
+          title="Register with Claude"
+          sub={running
+            ? 'Run this once. It shares the models this app already has loaded.'
+            : 'Turn the API on first - the MCP server connects to it.'}
+          control={
+            <button className="mc-btn ghost" onClick={() => copy(mcp, 'mcp')} disabled={!mcp}>
+              {copied === 'mcp' ? 'Copied' : 'Copy command'}
+            </button>
+          }
+        />
+      </div>
+      {mcp && <pre className="s-code mono">{mcp}</pre>}
+      <p className="s-note">
+        Gives Claude object detection, segmentation, image generation, transcription,
+        speech, embeddings and text generation against your local models. Keep InferML
+        running while you use them.
+      </p>
     </div>
   );
 }

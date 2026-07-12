@@ -6,10 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>InferML - run any Hugging Face model locally, with an OpenAI-compatible API</title>
   <meta name="description"
-    content="A desktop app for running any Hugging Face model on your own machine. Download it for Windows, macOS or Linux, and point LangChain, LangGraph or the OpenAI SDK at it like Ollama. Detection, segmentation, VLMs, ASR, TTS, diffusion. All local, no cloud, no upload." />
+    content="A desktop app for running any Hugging Face model on your own machine. Download it for Windows, macOS or Linux. Optional OpenAI-compatible API and an MCP server for Claude. Detection, segmentation, VLMs, ASR, TTS, diffusion. All local, no cloud, no upload." />
   <meta property="og:title" content="InferML. Run any Hugging Face model, locally - with an OpenAI-compatible API." />
   <meta property="og:description"
-    content="Download the app. Browse. Run. All local, behind a native UI and an OpenAI-compatible API. 200+ model families supported." />
+    content="Download the app. Browse. Run. All local, behind a native desktop UI - plus an optional OpenAI-compatible API and MCP tools for Claude. 200+ model families supported." />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="stylesheet" href="styles.css?v=32" />
@@ -54,7 +54,7 @@
       <nav class="nav-links">
         <a href="#models">Models</a>
         <a href="#features">Features</a>
-        <a href="#api">API</a>
+        <a href="#api">API &amp; MCP</a>
         <a href="#install">Download</a>
       </nav>
       <a href="https://github.com/IMvision12/InferML" target="_blank" rel="noopener" class="nav-gh" aria-label="GitHub repository" title="GitHub">
@@ -77,7 +77,7 @@
     <!-- Announcement banner -->
     <section class="banner">
       <span class="banner-badge">New</span>
-      <span>Now a desktop app with an OpenAI-compatible API - point LangChain, LangGraph &amp; the OpenAI SDK at it.</span>
+      <span>A native desktop app - with an optional OpenAI-compatible API and an MCP server for Claude.</span>
       <a href="#api">See the API</a>
     </section>
 
@@ -91,7 +91,7 @@
       <p class="hero-sub">
         Pick any model from the Hugging Face Hub. Download the app and run it.
         Detection, segmentation, VLMs, speech, diffusion, classification, depth, OCR, and more.
-        Ships an OpenAI-compatible API. Runs on CPU or GPU.
+          Runs on CPU or GPU. Optional OpenAI-compatible API and MCP server. Nothing leaves your machine.
       </p>
 
       <div class="pills">
@@ -442,12 +442,14 @@
       </div>
     </section>
 
-    <!-- OpenAI-compatible API -->
+
+
+    <!-- Optional local API + MCP -->
     <section id="api" class="api">
       <div class="section-head">
-        <h2>Also an OpenAI-compatible API.</h2>
-        <p>Point LangChain, LangGraph, or the OpenAI SDK at your own machine - the way you point them at Ollama.
-          It routes to whichever model is loaded in InferML.</p>
+        <h2>API and MCP Support</h2>
+        <p>One switch in Settings turns your local models into an OpenAI endpoint - and into tools Claude can call.
+          Off by default. Localhost only. It never serves the app's interface.</p>
       </div>
       <div class="api-frame">
         <div class="api-code">
@@ -474,27 +476,49 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
         </div>
         <ul class="api-points">
           <li>
-            <span class="api-pt-ic">◇</span>
+            <span class="api-pt-ic">&#9671;</span>
             <div><b>Drop-in OpenAI SDK.</b> Set <span class="mono">base_url</span>, use any api key. Nothing else changes.</div>
           </li>
           <li>
-            <span class="api-pt-ic">◈</span>
-            <div><b>LangChain &amp; LangGraph.</b> <span class="mono">ChatOpenAI(base_url=…)</span> just works, so your agents run on local weights.</div>
+            <span class="api-pt-ic">&#9672;</span>
+            <div><b>LangChain &amp; LangGraph.</b> <span class="mono">ChatOpenAI(base_url=&hellip;)</span> just works, so your agents run on local weights.</div>
           </li>
           <li>
-            <span class="api-pt-ic">≋</span>
+            <span class="api-pt-ic">&#8779;</span>
             <div><b>Streaming.</b> <span class="mono">stream=True</span> streams tokens over SSE, exactly like the hosted API.</div>
           </li>
           <li>
-            <span class="api-pt-ic">☰</span>
-            <div><b><span class="mono">GET /v1/models</span>.</b> Discover the currently loaded model programmatically.</div>
+            <span class="api-pt-ic">&#9881;</span>
+            <div><b>Tool &amp; function calling.</b> Parsed per family - Qwen &middot; Hermes &middot; Llama &middot; Mistral.</div>
           </li>
           <li>
-            <span class="api-pt-ic">⚙</span>
-            <div><b>Tool &amp; function calling.</b> Parsed per family - Qwen · Hermes · Llama · Mistral.</div>
+            <span class="api-pt-ic">&#9776;</span>
+            <div><b>Shares warm models.</b> It runs inside the engine, so it reuses what the app already loaded - not a second copy.</div>
           </li>
         </ul>
       </div>
+
+      <div class="mcp-frame">
+        <div class="section-head">
+          <h2>Claude, with your models.</h2>
+          <p>Register the MCP server once - the app copies the exact command for your install - and Claude can run
+            anything InferML has installed. Eleven tools.</p>
+        </div>
+        <div class="mcp-tools">
+          <div class="mcp-tool"><span>&#9635;</span><code>detect_objects</code></div>
+          <div class="mcp-tool"><span>&#9638;</span><code>segment_image</code></div>
+          <div class="mcp-tool"><span>&#10022;</span><code>generate_image</code></div>
+          <div class="mcp-tool"><span>&#9836;</span><code>transcribe_audio</code></div>
+          <div class="mcp-tool"><span>&#9834;</span><code>text_to_speech</code></div>
+          <div class="mcp-tool"><span>&#9998;</span><code>generate_text</code></div>
+          <div class="mcp-tool"><span>&#8942;</span><code>embed_text</code></div>
+          <div class="mcp-tool"><span>&#9906;</span><code>search_models</code></div>
+          <div class="mcp-tool"><span>&#8623;</span><code>download_model</code></div>
+          <div class="mcp-tool"><span>&#9776;</span><code>list_models</code></div>
+          <div class="mcp-tool"><span>&#9673;</span><code>inferml_status</code></div>
+        </div>
+      </div>
+
     </section>
 
     <!-- Features -->

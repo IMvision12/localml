@@ -1,32 +1,30 @@
 /**
- * Electron main process - the InferML desktop shell.
+ * Electron main process - the InferML desktop app.
  *
  * Boot sequence (the bootstrap window narrates each step):
  *   1. find a system Python >= 3.10          -> python-env.findSystemPython
  *   2. create/repair the managed venv        -> python-env.ensureVenv
- *   3. start the FastAPI server on loopback  -> sidecar.start
- *   4. point the window at it                -> win.loadURL(sidecar.url)
+ *   3. start the Python engine               -> PythonRunner.start   (stdin/stdout)
+ *   4. show the UI                           -> win.loadFile(renderer)
  *
- * Steps 1-2 only do real work on first launch; afterwards the venv is warm and
- * boot is just step 3-4. Once the window loads the sidecar URL, the app *is*
- * the existing web UI - `web-bridge.js` talks HTTP+SSE to the same origin, so
- * the renderer and the Python engine are untouched by this shell.
+ * Steps 1-2 only do real work on first launch. There is no server and no port:
+ * the engine is a child process we talk to in JSON over its stdio (see
+ * python/runner.py), and the UI is a local file. Nothing InferML runs is
+ * reachable from the network, or from a browser.
  *
- * Lifecycle: the window is a *view onto* a background service, not the service
- * itself. Closing it hides it and leaves the server, the loaded models, and the
- * OpenAI-compatible API running behind the tray icon; only "Quit" from the tray
- * (or Cmd-Q) actually stops the sidecar. Anything less would mean an agent
- * talking to http://localhost:11500/v1 dies the moment someone tidies away a
- * window.
+ * Lifecycle: the window is a *view onto* a running engine, not the engine
+ * itself. Closing it hides it and leaves the engine - and every model it has
+ * loaded - resident behind the tray icon, so reopening is instant. Only "Quit"
+ * from the tray (or Cmd-Q) actually stops it.
  */
 'use strict';
 
-const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
-const fs = require('fs');
+const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('path');
 
 const { findSystemPython, ensureVenv, isVenvReady, venvPython, MIN_PYTHON } = require('./python-env');
-const { Sidecar } = require('./sidecar');
+const { PythonRunner } = require('./python-runner');
+const { registerIpc } = require('./ipc');
 const { initUpdater } = require('./updater');
 const { writeMcpLauncher, launcherPath } = require('./mcp-setup');
 const { migrateLegacyData } = require('./migrate');
@@ -34,11 +32,34 @@ const { createTray, destroyTray } = require('./tray');
 
 const isDev = !app.isPackaged;
 
-/** The shipped `python/` source tree (extraResources in the packaged app). */
+/** The shipped `python/` tree (extraResources in the packaged app). */
 function pythonDir() {
   return isDev
     ? path.join(__dirname, '..', '..', 'python')
     : path.join(process.resourcesPath, 'python');
+}
+
+/**
+ * The UI, as a file on disk. Always the compiled build - dev included.
+ *
+ * The source index.html compiles JSX in the browser with Babel Standalone, which
+ * needs to *fetch* each .jsx over XHR. That worked when a server was serving the
+ * page. It cannot work now: the document's origin is file://, which is opaque,
+ * so those fetches are cross-origin and Chromium blocks them - React never
+ * mounts and the window comes up black, with no error, because the failure is a
+ * blocked request rather than a thrown exception.
+ *
+ * The alternative would be `webSecurity: false`, which is not a trade worth
+ * making to save a build step - it would also switch off the protections that
+ * matter when the UI renders markdown from HuggingFace model cards.
+ *
+ * So both paths load src/renderer/dist. `npm start` builds it first, and
+ * `npm run build:renderer:watch` rebuilds on save if you want a fast loop. The
+ * bonus is that dev and production now run byte-identical code, and the CSP
+ * loses 'unsafe-eval' everywhere instead of only in packaged builds.
+ */
+function rendererHtml() {
+  return path.join(__dirname, '..', 'renderer', 'dist', 'index.html');
 }
 
 /** Auto-started at login: warm up in the tray, don't pop a window. */
@@ -72,7 +93,8 @@ function installMenu() {
 
 let win = null;
 let tray = null;
-let sidecar = null;
+let runner = null;
+let ipc = null;
 let booted = false;
 let isQuitting = false;
 
@@ -97,7 +119,7 @@ function createWindow() {
     if (!startedHidden()) win.show();
   });
 
-  // Closing hides. The sidecar - and everything loaded into it - survives, and
+  // Closing hides. The engine - and everything loaded into it - survives, and
   // the tray is how you get back. Quit is the only thing that really stops it.
   win.on('close', (e) => {
     if (isQuitting) return;
@@ -129,8 +151,8 @@ function showWindow() {
   if (process.platform === 'darwin' && app.dock) app.dock.show();
   if (!win || win.isDestroyed()) {
     createWindow();
-    // A window recreated after boot goes straight back to the live server.
-    if (booted && sidecar && sidecar.url) win.loadURL(sidecar.url);
+    // A window recreated after boot goes straight back to the UI.
+    if (booted) win.loadFile(rendererHtml());
     else boot();
     return;
   }
@@ -139,10 +161,10 @@ function showWindow() {
   win.focus();
 }
 
-/** The only path that actually stops the server. */
+/** The only path that actually stops the engine. */
 function quitApp() {
   isQuitting = true;
-  if (sidecar) sidecar.stop();
+  if (runner) runner.stop();
   destroyTray();
   app.quit();
 }
@@ -166,10 +188,7 @@ async function boot() {
     return;
   }
 
-  send('boot:status', {
-    step: `Found Python ${py.version.join('.')}`,
-    detail: py.exe,
-  });
+  send('boot:status', { step: `Found Python ${py.version.join('.')}`, detail: py.exe });
 
   try {
     if (!isVenvReady(app.getPath('userData'))) {
@@ -187,57 +206,54 @@ async function boot() {
     return;
   }
 
-  send('boot:status', { step: 'Starting the model server' });
-  sidecar = new Sidecar({
-    pythonPath: venvPython(app.getPath('userData')),
-    pythonDir: pythonDir(),
-    dataDir: app.getPath('userData'),
-  });
+  send('boot:status', { step: 'Starting the inference engine' });
 
   try {
-    const url = await sidecar.start((line) => send('boot:log', { line }));
-    booted = true;
-    // Point the MCP launcher at this install before the UI can offer it.
+    await runner.start();
+    await ipc.primeStatus();
+    // Point the MCP launcher at this install. Cheap, and doing it every boot is
+    // what keeps `claude mcp add inferml -- ...` working across app updates.
     writeMcpLauncher(app.getPath('userData'), pythonDir());
-    if (tray && tray.refresh) tray.refresh();   // "starting..." -> the live URL
-
-    // Stamp every request this window makes to the server with the shell's
-    // secret. The server hands the UI to holders of that secret and to nobody
-    // else, so pointing a browser at localhost gets a 403 instead of the app.
-    // Applies to page loads, fetch/XHR and EventSource alike.
-    win.webContents.session.webRequest.onBeforeSendHeaders(
-      { urls: [`${url}/*`] },
-      (details, cb) => cb({
-        requestHeaders: { ...details.requestHeaders, 'X-InferML-Shell': sidecar.uiToken },
-      }),
-    );
-
-    if (win && !win.isDestroyed()) await win.loadURL(url);
-    initUpdater(win);
+    booted = true;
+    if (tray && tray.refresh) tray.refresh();
+    if (win && !win.isDestroyed()) await win.loadFile(rendererHtml());
   } catch (e) {
     send('boot:error', {
-      title: 'The model server failed to start',
+      title: 'The inference engine failed to start',
       message: String((e && e.message) || e),
     });
   }
 }
 
-// One instance only: a second copy would start a second server, load a second
-// copy of every model, and fight over the same venv.
+// One instance only: a second copy would start a second engine and load a second
+// copy of every model into the same GPU.
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   // Re-running the app (double-clicking the icon while it sits in the tray)
-  // surfaces the existing instance instead of starting a rival server.
+  // surfaces the existing instance instead of starting a rival engine.
   app.on('second-instance', () => showWindow());
 
   app.whenReady().then(() => {
     installMenu();
 
+    runner = new PythonRunner({
+      pythonPath: venvPython(app.getPath('userData')),
+      pythonDir: pythonDir(),
+      dataDir: app.getPath('userData'),
+      version: app.getVersion(),
+    });
+
+    // Registered before any window exists, let alone loads. The renderer asks
+    // for state the moment it mounts, and an ipcMain handler that isn't there
+    // yet throws "No handler registered for ..." instead of answering.
+    ipc = registerIpc({ runner, getWin: () => win });
+    initUpdater(() => win);
+
     tray = createTray({
       onOpen: showWindow,
       onQuit: quitApp,
-      getUrl: () => (sidecar && sidecar.url) || null,
+      isRunning: () => !!runner && runner.running,
     });
 
     createWindow();
@@ -250,17 +266,20 @@ if (!app.requestSingleInstanceLock()) {
 
 // Deliberately empty. The default behaviour quits the app when the last window
 // closes - which is exactly what must NOT happen here: the window is a view onto
-// a running service, and the tray is how you get it back.
+// a running engine, and the tray is how you get it back.
 app.on('window-all-closed', () => { /* keep running in the tray */ });
 
 // Cmd-Q / taskbar "close window" / OS shutdown all funnel through here, so this
-// is the backstop that guarantees the sidecar dies with the app. A survivor
-// would hold GPU memory and a locked interpreter with no UI left to stop it.
-app.on('before-quit', () => { isQuitting = true; if (sidecar) sidecar.stop(); });
-app.on('will-quit', () => { if (sidecar) sidecar.stop(); });
-process.on('exit', () => { if (sidecar) sidecar.stop(); });
+// is the backstop that guarantees the engine dies with the app. A survivor would
+// hold GPU memory and a locked interpreter with no UI left to stop it.
+app.on('before-quit', () => { isQuitting = true; if (runner) runner.stop(); });
+app.on('will-quit', () => { if (runner) runner.stop(); });
+process.on('exit', () => { if (runner) runner.stop(); });
 
 // --- bootstrap page IPC ------------------------------------------------------
+//
+// The only two channels bootstrap.html uses. Everything the *app* needs lives in
+// ipc.js; these exist because the bootstrap page runs before the app does.
 
 ipcMain.handle('boot:retry', async () => { await boot(); });
 
@@ -268,37 +287,11 @@ ipcMain.handle('boot:open-python-download', async () => {
   await shell.openExternal('https://www.python.org/downloads/');
 });
 
-ipcMain.handle('app:paths', async () => ({
-  userData: app.getPath('userData'),
-  venvPython: venvPython(app.getPath('userData')),
-  pythonDir: pythonDir(),
-  version: app.getVersion(),
-}));
-
-// The exact, copy-pasteable command that registers this install as an MCP
-// server. Both paths are stable across app updates.
-ipcMain.handle('app:mcp-command', async () => {
+// The exact command that registers this install as an MCP server. Both paths are
+// stable across app updates, which is the whole point of the generated launcher.
+ipcMain.handle('inferml:mcpCommand', async () => {
   const userData = app.getPath('userData');
-  const py = venvPython(userData);
-  const script = launcherPath(userData);
   return {
-    command: `claude mcp add inferml -- "${py}" "${script}"`,
-    python: py,
-    script,
+    command: `claude mcp add inferml -- "${venvPython(userData)}" "${launcherPath(userData)}"`,
   };
-});
-
-ipcMain.handle('app:show-logs', async () => {
-  const dir = app.getPath('userData');
-  fs.mkdirSync(dir, { recursive: true });
-  await shell.openPath(dir);
-});
-
-ipcMain.handle('app:copy-diagnostics', async () => {
-  const lines = (sidecar && sidecar.stderr) || [];
-  await dialog.showMessageBox(win, {
-    type: 'info',
-    title: 'Server log',
-    message: lines.slice(-20).join('\n') || 'No server output captured.',
-  });
 });

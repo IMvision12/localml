@@ -3,10 +3,8 @@
 Embedding models (sentence-transformers, bge, e5, gte, MiniLM, nomic, …) don't
 fit the standard `transformers.pipeline()` shape well and their output - a raw
 vector - isn't one of the visual output kinds, so this task bypasses the default
-loader and uses the shared `embedding_backend` (the same core the OpenAI
-`/v1/embeddings` endpoint uses, so a model opened in the UI and hit over the API
-share one loaded copy). The UI renders the `vector` output kind: dimensionality
-plus a short preview of the values.
+loader and uses the shared `embedding_backend`. The UI renders the `vector`
+output kind: dimensionality plus a short preview of the values.
 """
 from __future__ import annotations
 

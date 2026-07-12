@@ -287,23 +287,23 @@ const TASK_META = {
     params: GEN_PARAMS},
   'feature-extraction':  { nm: 'Embed',     input: 'text', output: 'vector', icon: 'embed', accent: 'oklch(70% 0.10 250)',
     guide: {
-      summary: 'Text embeddings (sentence-transformers, BGE, E5, GTE, MiniLM, Nomic, …). Also served over the OpenAI-compatible API at /v1/embeddings.',
+      summary: 'Text embeddings (sentence-transformers, BGE, E5, GTE, MiniLM, Nomic, …).',
       rows: [{ k: 'Text', v: 'A sentence or passage to embed', req: true }],
     },
     params: [
       { key: 'normalize',  label: 'Normalize (unit length)', type: 'boolean', default: true,
-        help: 'L2-normalize the vector so cosine similarity is a plain dot product. Matches the OpenAI embeddings API.' },
+        help: 'L2-normalize the vector so cosine similarity is a plain dot product. Cosine similarity then reduces to a plain dot product.' },
       { key: 'dimensions', label: 'Dimensions', type: 'number', default: 0, min: 0, max: 4096, step: 1,
         help: 'Truncate to the first N dimensions (Matryoshka models like nomic-embed / text-embedding-3). 0 = full size.' },
     ]},
   'sentence-similarity': { nm: 'Embed',     input: 'text', output: 'vector', icon: 'embed', accent: 'oklch(70% 0.10 250)',
     guide: {
-      summary: 'Text embeddings (sentence-transformers, BGE, E5, GTE, MiniLM, Nomic, …). Also served over the OpenAI-compatible API at /v1/embeddings.',
+      summary: 'Text embeddings (sentence-transformers, BGE, E5, GTE, MiniLM, Nomic, …).',
       rows: [{ k: 'Text', v: 'A sentence or passage to embed', req: true }],
     },
     params: [
       { key: 'normalize',  label: 'Normalize (unit length)', type: 'boolean', default: true,
-        help: 'L2-normalize the vector so cosine similarity is a plain dot product. Matches the OpenAI embeddings API.' },
+        help: 'L2-normalize the vector so cosine similarity is a plain dot product. Cosine similarity then reduces to a plain dot product.' },
       { key: 'dimensions', label: 'Dimensions', type: 'number', default: 0, min: 0, max: 4096, step: 1,
         help: 'Truncate to the first N dimensions (Matryoshka models like nomic-embed / text-embedding-3). 0 = full size.' },
     ]},

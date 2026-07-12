@@ -1010,62 +1010,10 @@ a { color: inherit; text-decoration: none; }
 .chrome-url-host { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ─── api ──────────────────────────────────────────────────────────────── */
-.api { max-width: 1200px; margin: 140px auto 0; padding: 0 32px; }
-.api-frame {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 28px;
-  align-items: stretch;
-}
-@media (max-width: 860px) { .api-frame { grid-template-columns: 1fr; gap: 20px; } }
-.api-code {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  overflow: hidden;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(96, 165, 250, 0.08) inset;
-}
-.api-code-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px;
-  background: var(--bg-3);
-  border-bottom: 1px solid var(--border);
-}
-.api-code-file { margin-left: 6px; font-size: 12px; color: var(--fg-3); }
-.api-code-copy { margin-left: auto; height: 28px; }
-.api-pre {
-  margin: 0; padding: 22px 24px;
-  font-size: 13px; line-height: 1.7;
-  color: var(--fg);
-  overflow-x: auto;
-  tab-size: 4;
-}
-.api-pre code { font-family: inherit; }
 .tok-kw  { color: #c084fc; }
 .tok-str { color: #34d399; }
 .tok-fn  { color: var(--accent); }
 .tok-com { color: var(--fg-3); font-style: italic; }
-.api-points {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; flex-direction: column;
-  align-self: center;
-}
-.api-points li {
-  display: flex; align-items: flex-start; gap: 14px;
-  padding: 15px 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px; color: var(--fg-2); line-height: 1.5;
-}
-.api-points li:last-child { border-bottom: 0; }
-.api-points b { color: var(--fg); font-weight: 600; }
-.api-pt-ic {
-  flex-shrink: 0;
-  width: 30px; height: 30px; border-radius: 8px;
-  background: rgba(96, 165, 250, 0.14);
-  color: var(--accent);
-  display: grid; place-items: center;
-  font-size: 14px;
-}
 
 /* ─── install steps ────────────────────────────────────────────────────── */
 .install { max-width: 1100px; margin: 140px auto 0; padding: 0 32px; }
@@ -1163,6 +1111,7 @@ a { color: inherit; text-decoration: none; }
   transition: border-color 0.3s;
 }
 .oneliner:hover { border-color: rgba(96, 165, 250, 0.4); }
+.oneliner-note { margin: 12px 2px 0; font-size: 12.5px; line-height: 1.65; color: var(--muted, #94a3b8); }
 .oneliner-os {
   display: flex; align-items: center; gap: 8px;
   font-size: 13px; font-weight: 600; color: var(--fg-2);
@@ -1215,3 +1164,88 @@ a { color: inherit; text-decoration: none; }
 .dl-card-meta { font-size: 12.5px; color: var(--fg-3); font-family: 'JetBrains Mono', monospace; }
 /* The visitor's own OS (set by script.js) */
 .dl-card.is-you { border-color: rgba(96, 165, 250, 0.5); box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.22); }
+
+/* --- Optional local API + MCP ------------------------------------------- */
+.api { max-width: 1200px; margin: 140px auto 0; padding: 0 32px; }
+.api-frame {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 28px;
+  align-items: stretch;
+}
+.api-code {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(96, 165, 250, 0.08) inset;
+}
+.api-code-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+.api-code-file { margin-left: 6px; font-size: 12px; color: var(--fg-3); }
+.api-code-copy { margin-left: auto; height: 28px; }
+.api-pre {
+  margin: 0; padding: 22px 24px;
+  font-size: 13px; line-height: 1.7;
+  color: var(--fg);
+  overflow-x: auto;
+  tab-size: 4;
+}
+.api-pre code { font-family: inherit; }
+.tok-kw  { color: #c084fc; }
+.tok-str { color: #34d399; }
+.tok-fn  { color: var(--accent); }
+.tok-com { color: var(--fg-3); font-style: italic; }
+.api-points {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+  align-self: center;
+}
+.api-points li {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 15px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; color: var(--fg-2); line-height: 1.5;
+}
+.api-points li:last-child { border-bottom: 0; }
+.api-points b { color: var(--fg); font-weight: 600; }
+.api-pt-ic {
+  flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(96, 165, 250, 0.14);
+  color: var(--accent);
+  display: grid; place-items: center;
+  font-size: 14px;
+}
+
+/* The MCP half of the section: a tools grid under the API frame. */
+.mcp-frame { margin-top: 28px; }
+.mcp-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.mcp-tool {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 13px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+.mcp-tool span:first-child { opacity: 0.75; flex-shrink: 0; }
+.mcp-tool code { font-size: 11.5px; color: #93c5fd; }
+@media (max-width: 860px) {
+  .api { padding: 0 20px; margin-top: 90px; }
+  /* Stack the code sample above the bullet list - side by side, each column is
+     too narrow to hold a line of Python without scrolling. */
+  .api-frame { grid-template-columns: 1fr; gap: 20px; }
+  .api-points { align-self: start; }
+  .mcp-tools { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
