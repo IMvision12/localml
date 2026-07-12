@@ -713,7 +713,11 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .dot { width: 5px; height: 5px; border-radius: 3px; display: inline-block; }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 
-.welcome { position: absolute; top: 36px; right: 0; bottom: 0; left: 0; background: var(--bg-0); z-index: 30; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+/* top:0, not 36px. The 36px was clearance for a custom titlebar that no longer
+   exists - the window has a native frame now. Left as-is, this overlay started
+   36px down the page and the sidebar's first button showed through the gap
+   above it. Same applies to .onboard below. */
+.welcome { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: var(--bg-0); z-index: 30; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .welcome-bg { position: absolute; inset: 0; pointer-events: none;
   background:
     radial-gradient(ellipse 800px 500px at 50% 40%, oklch(55% 0.14 230 / 0.22), transparent 65%),
@@ -763,7 +767,7 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .welcome-features .dot { width: 5px; height: 5px; border-radius: 3px; background: var(--accent); }
 .welcome-foot { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 10.5px; color: var(--fg-3); }
 
-.onboard { position: absolute; top: 36px; right: 0; bottom: 0; left: 0; background: var(--bg-1); z-index: 20; display: flex; }
+.onboard { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: var(--bg-1); z-index: 20; display: flex; }
 .ob-side { width: 360px; flex-shrink: 0; background: var(--bg-0); border-right: 1px solid var(--line); padding: 48px 36px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 .ob-side::before { content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(circle at 20% 20%, oklch(55% 0.12 230 / 0.22), transparent 45%),

@@ -15,6 +15,7 @@
 'use strict';
 
 const { spawn } = require('child_process');
+const crypto = require('crypto');
 const http = require('http');
 const net = require('net');
 const path = require('path');
@@ -91,6 +92,13 @@ class Sidecar {
     this.port = null;
     this.exited = false;
     this.stderr = [];
+
+    // A fresh secret per launch, shared only with the server we're about to
+    // spawn. The shell attaches it to every request the window makes; the server
+    // serves the UI to nobody else. That's what stops someone opening the app in
+    // a browser at localhost - they can reach the port, but they can't know this.
+    // It never touches disk and dies with the process.
+    this.uiToken = crypto.randomBytes(32).toString('hex');
   }
 
   get url() {
@@ -123,6 +131,8 @@ class Sidecar {
           // "delete your data" a two-step answer. Pin the server to Electron's
           // userData so there is exactly one InferML directory per platform.
           INFERML_DATA_DIR: this.dataDir,
+          // Locks the UI to this shell. See the comment on `uiToken` above.
+          INFERML_UI_TOKEN: this.uiToken,
         },
       },
     );

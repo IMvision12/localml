@@ -21,7 +21,7 @@
  */
 'use strict';
 
-const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -47,6 +47,29 @@ function startedHidden() {
     || app.getLoginItemSettings().wasOpenedAsHidden;
 }
 
+/**
+ * Kill Electron's stock "File / Edit / View / Window / Help" menu.
+ *
+ * The app has its own in-window navigation; the default menu is pure Chromium
+ * boilerplate (Reload, Toggle DevTools, Zoom...) that just eats vertical space.
+ *
+ * macOS is the exception: there the menu bar lives in the system bar, not the
+ * window, and removing it outright would take Cmd-Q, Cmd-C and Cmd-V with it -
+ * standard-role menu items are what actually bind those shortcuts. So macOS
+ * keeps a minimal menu, and Windows/Linux get none at all.
+ */
+function installMenu() {
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { role: 'appMenu' },     // About / Hide / Quit
+      { role: 'editMenu' },    // Undo / Cut / Copy / Paste / Select All
+      { role: 'windowMenu' },  // Minimize / Zoom / Close
+    ]));
+  } else {
+    Menu.setApplicationMenu(null);
+  }
+}
+
 let win = null;
 let tray = null;
 let sidecar = null;
@@ -62,6 +85,7 @@ function createWindow() {
     show: false,
     backgroundColor: '#0b0d12',
     title: 'InferML',
+    autoHideMenuBar: true,   // belt-and-braces: no menu strip, and no Alt to reveal one
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -176,6 +200,18 @@ async function boot() {
     // Point the MCP launcher at this install before the UI can offer it.
     writeMcpLauncher(app.getPath('userData'), pythonDir());
     if (tray && tray.refresh) tray.refresh();   // "starting..." -> the live URL
+
+    // Stamp every request this window makes to the server with the shell's
+    // secret. The server hands the UI to holders of that secret and to nobody
+    // else, so pointing a browser at localhost gets a 403 instead of the app.
+    // Applies to page loads, fetch/XHR and EventSource alike.
+    win.webContents.session.webRequest.onBeforeSendHeaders(
+      { urls: [`${url}/*`] },
+      (details, cb) => cb({
+        requestHeaders: { ...details.requestHeaders, 'X-InferML-Shell': sidecar.uiToken },
+      }),
+    );
+
     if (win && !win.isDestroyed()) await win.loadURL(url);
     initUpdater(win);
   } catch (e) {
@@ -196,6 +232,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => showWindow());
 
   app.whenReady().then(() => {
+    installMenu();
+
     tray = createTray({
       onOpen: showWindow,
       onQuit: quitApp,
