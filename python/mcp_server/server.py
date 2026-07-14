@@ -1,15 +1,17 @@
 """MCP server exposing InferML's local models to Claude and other LLM clients.
 
-Wraps a running `inferml` server (see client.py for why it's a client, not an
+Wraps InferML's local HTTP API (see client.py for why this is a client, not an
 engine embed) as MCP tools: detection, segmentation, transcription, speech,
 image generation, text generation, embeddings, plus model discovery/install.
 
-Run:
-    inferml --no-browser          # terminal 1: the model server
-    inferml-mcp                   # terminal 2: this, over stdio
+Requires the InferML desktop app to be running with its API switched on:
+Settings -> API & MCP -> enable the local API server. The API is off by default -
+it is the one thing InferML deliberately exposes, so it is opt-in - and with it
+off there is nothing on port 11500 for these tools to talk to.
 
-Claude Code:
-    claude mcp add inferml -- inferml-mcp
+Registering with Claude Code: the app writes a launcher and shows the exact
+`claude mcp add inferml -- ...` command on that same Settings page. Both paths in
+it are stable across app updates, which is the point of the generated launcher.
 
 Conventions:
   - Media *inputs* are local file paths. LLM clients have paths, not base64.
@@ -35,9 +37,10 @@ from mcp_server.client import DEFAULT_URL, InferMLClient, InferMLError
 
 INSTRUCTIONS = """Runs Hugging Face models locally through InferML.
 
-Requires the InferML server to be running (`inferml --no-browser`). Call
-`inferml_status` first if a tool fails - it reports whether the server is up
-and which inference stack is installed.
+Requires the InferML desktop app to be running with its local API enabled
+(Settings -> API & MCP). The API is off by default, so this is the first thing
+to check. Call `inferml_status` if a tool fails - it reports whether the API is
+reachable and which inference stack is installed.
 
 Models are Hugging Face repo ids (e.g. "hustvl/yolos-tiny"). Most tools have a
 small default model; `generate_image` has none, because diffusion weights are

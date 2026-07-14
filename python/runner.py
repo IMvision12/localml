@@ -126,14 +126,38 @@ def _torch_index(accelerator: str) -> tuple[str, str | None]:
     return ("CPU", "https://download.pytorch.org/whl/cpu")
 
 
-def _pip_phases(accelerator: str):
+def _installer() -> list[str]:
+    """`uv pip install`, falling back to pip if uv somehow isn't there.
+
+    uv is not just faster here - it is the difference between a progress display
+    and a frozen one. pip renders its download bar with carriage returns and, on
+    a pipe, only flushes it once the file has fully arrived: a 2.4GB CUDA wheel
+    means several minutes of *zero* output, which reads as a hang. uv announces
+    each package and its size up front ("Downloading torch (2.4GiB)") and reports
+    each one as it lands.
+
+    Note this invokes uv's *binary* directly, not `python -m uv`. That module is
+    a shim which re-spawns uv.exe through subprocess - and since the venv's
+    python.exe is itself a launcher stub that re-execs the real interpreter, the
+    chain became runner -> stub -> python -> shim -> uv.exe. Output never made it
+    back down four levels of inherited handles: the install ran, and the UI saw
+    complete silence. uv tells us where its binary is; use it.
+    """
+    try:
+        from uv import find_uv_bin
+        return [str(find_uv_bin()), "pip", "install", "--python", sys.executable]
+    except Exception:
+        return [sys.executable, "-m", "pip", "install"]
+
+
+def _install_phases(accelerator: str):
     torch_pkgs = ["torch>=2.6", "torchvision", "torchaudio>=2.6"]
-    pip = [sys.executable, "-m", "pip", "install"]
+    install = _installer()
     label, index = _torch_index(accelerator)
-    torch_cmd = pip + (["--index-url", index] if index else []) + torch_pkgs
+    torch_cmd = install + (["--index-url", index] if index else []) + torch_pkgs
     return [
         (f"Installing PyTorch ({label})", torch_cmd),
-        ("Installing transformers, diffusers and supporting libraries", pip + _INFERENCE_PKGS),
+        ("Installing transformers, diffusers and supporting libraries", install + _INFERENCE_PKGS),
     ]
 
 
@@ -168,8 +192,16 @@ def _storage_size(key: str) -> dict:
         b, f = _dir_size([root])
         out = {"ok": True, "bytes": b, "files": f, "paths": [str(root)]}
     elif key in ("pyRuntime", "py"):
-        b, f = _dir_size([sys.prefix])
-        out = {"ok": True, "bytes": b, "files": f, "paths": [sys.prefix]}
+        # The venv *and* the wheel cache that fills it. Reporting only the venv
+        # understated the runtime's real footprint enormously - 140MB of venv can
+        # sit on top of 10GB of cached wheels - and a Storage screen that hides ten
+        # gigabytes is worse than no Storage screen.
+        roots = [sys.prefix]
+        cache = os.environ.get("UV_CACHE_DIR")
+        if cache and os.path.isdir(cache):
+            roots.append(cache)
+        b, f = _dir_size(roots)
+        out = {"ok": True, "bytes": b, "files": f, "paths": roots}
     else:
         return {"ok": False, "error": f"unknown storage key {key!r}"}
     _SIZE_CACHE[key] = (out, time.time() + _SIZE_TTL)
@@ -237,34 +269,119 @@ def _op_download(rid, p):
             _ACTIVE_DOWNLOADS.pop(model_id, None)
 
 
-def _op_setup(rid, p):
-    """Install the inference stack (torch et al.) for the chosen accelerator.
+def _stream_process(cmd: list[str], emit) -> int:
+    """Run `cmd`, calling emit(text) for every line it writes. Returns the exit code.
 
-    pip runs as a subprocess and its output is streamed line by line, because
-    this is a multi-gigabyte download and a silent progress bar for ten minutes
-    reads as a hang.
+    Reads a character at a time and treats BOTH \\r and \\n as end-of-line.
+    Iterating the pipe (`for line in proc.stdout`) instead - the obvious way, and
+    what this used to do - blocks until a *newline* arrives, and installers draw
+    their progress bars by rewriting one line with carriage returns. The bar only
+    terminates in a newline once the download has finished, so a 2.4GB wheel
+    produced several minutes of complete silence followed by one line saying it
+    was done. The window looked frozen because, as far as it could tell, it was.
     """
     import subprocess
 
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=0, encoding="utf-8", errors="replace",
+    )
+
+    last = [time.time()]
+
+    def say(text: str) -> None:
+        """Report a line, but never at the cost of the drain.
+
+        This is the whole ballgame. If emit() raises, the pump thread dies, nobody
+        reads uv's stdout, uv blocks writing into a full pipe buffer, and it never
+        exits - so the poll loop below waits forever on a process that is waiting on
+        us. The install appears to freeze mid-log and stays frozen, permanently.
+        Draining the pipe is the reader's real job; reporting is a courtesy, and a
+        courtesy must never be able to deadlock the thing it is reporting on.
+        """
+        try:
+            last[0] = time.time()
+            emit(text)
+        except Exception:
+            pass
+
+    def pump():
+        buf = ""
+        try:
+            while True:
+                ch = proc.stdout.read(1)
+                if not ch:
+                    break
+                if ch in "\r\n":
+                    text = buf.strip()
+                    buf = ""
+                    if text:
+                        say(text)
+                else:
+                    buf += ch
+            if buf.strip():
+                say(buf.strip())
+        except Exception:
+            pass    # the pipe broke; the wait below will collect the exit code
+
+    reader = threading.Thread(target=pump, name="setup-reader", daemon=True)
+    reader.start()
+
+    # Even uv goes quiet for the body of a multi-GB download - it says
+    # "Downloading torch (2.4GiB)" and then nothing until the file lands. Without
+    # a sign of life, a correct install is indistinguishable from a hung one, so
+    # say something on the way.
+    started = time.time()
+    while True:
+        try:
+            proc.wait(timeout=1.0)
+            break
+        except subprocess.TimeoutExpired:
+            pass
+
+        idle = time.time() - last[0]
+        if idle >= 15:
+            mins, secs = divmod(int(time.time() - started), 60)
+            say(f"… still working ({mins}m {secs:02d}s elapsed) - large downloads take a while")
+
+        # The reader reaching EOF means the process closed its output: it is done
+        # talking and should be about to exit. If it is somehow still alive a minute
+        # later it is wedged, and waiting on it forever - which is what this loop
+        # used to do - only turns a stuck install into a stuck application. Kill it
+        # and let the caller report a real failure.
+        if not reader.is_alive() and time.time() - last[0] > 60:
+            say("The installer stopped responding. Giving up on it.")
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            proc.wait(timeout=10)
+            break
+
+    reader.join(timeout=5)
+    try:
+        proc.stdout.close()
+    except Exception:
+        pass
+    return proc.returncode
+
+
+def _op_setup(rid, p):
+    """Install the inference stack (torch et al.) for the chosen accelerator."""
     if _SETUP_RUNNING.is_set():
         return {"ok": False, "error": "A setup is already running."}
     _SETUP_RUNNING.set()
 
     accel = (p or {}).get("accelerator") or "cpu"
     try:
-        for step_label, cmd in _pip_phases(accel):
+        for step_label, cmd in _install_phases(accel):
             _progress(rid, {"kind": "step", "text": step_label})
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1,
-            )
-            for line in proc.stdout:
-                line = line.rstrip()
-                if line:
-                    _progress(rid, {"kind": "log", "text": line})
-            proc.wait()
-            if proc.returncode != 0:
-                return {"ok": False, "error": f"pip exited {proc.returncode} during: {step_label}"}
+            echo = " ".join([os.path.basename(cmd[0])] + cmd[1:])
+            _progress(rid, {"kind": "log", "text": "$ " + echo})
+            code = _stream_process(cmd, lambda text: _progress(rid, {"kind": "log", "text": text}))
+            if code != 0:
+                return {"ok": False, "error": f"Install failed (exit {code}) during: {step_label}"}
         _progress(rid, {"kind": "step", "text": "Runtime ready"})
         return {"ok": True}
     except Exception as e:
@@ -411,13 +528,26 @@ OPS = {
 
 
 def _dispatch(msg: dict) -> None:
+    """Route one request frame: {"id", "type", "payload"}.
+
+    The payload is a nested object, not spread across the frame, and it has to
+    stay that way. Flattened, any argument named `id` collides with the frame's
+    own id - and it wins, because it is merged in last. The engine then answers
+    the request with the *argument* as its id, Electron looks that up among the
+    requests it is waiting on, finds nothing, and drops the reply. The caller's
+    promise never settles: no error, no timeout, just a spinner forever. That is
+    what "fetching…" was on every model card, and it silently broke six ops.
+    """
     rid = msg.get("id")
     op = OPS.get(msg.get("type"))
     if op is None:
         _err(rid, f"unknown op {msg.get('type')!r}")
         return
+    payload = msg.get("payload")
+    if not isinstance(payload, dict):
+        payload = {}
     try:
-        _ok(rid, op(rid, msg))
+        _ok(rid, op(rid, payload))
     except Exception as e:
         print(f"[runner] {msg.get('type')} failed:\n{traceback.format_exc()}")
         _err(rid, actionable_error(e))
@@ -434,7 +564,51 @@ def _hw_poller(interval: float = 2.5) -> None:
         time.sleep(interval)
 
 
+# The OpenBLAS-backed extensions. Both numpy and scipy ship their own copy, and
+# both deadlock if they are first imported while a read is pending on stdin.
+_WARM = ("numpy", "scipy.linalg")
+
+
+def _warm_native_libs() -> None:
+    """Import numpy and scipy now, on this thread, before anything reads stdin.
+
+    This is not an optimisation. Skip it and the first inference deadlocks, every
+    single time, on Windows.
+
+    Once the loop below is running there is always a blocking read pending on the
+    stdin pipe - that read *is* the loop. Importing numpy from any other thread
+    while it is outstanding never returns: it wedges inside the LoadLibrary of
+    numpy's `_multiarray_umath` and stays there. The GIL is not the problem, since
+    every other thread keeps running normally; it is the DLL load itself that
+    hangs, and nothing recovers it. The request is never answered, so the window
+    sits on "Loading…" and an MCP call for the same inference hangs with it - both
+    arrive as ops, and ops run on pool threads.
+
+    What the two culprits have in common is OpenBLAS, which each of them bundles
+    and which spawns its worker threads from inside DLL initialisation. Extensions
+    without it - pillow, psutil, tokenizers, safetensors - are entirely unaffected,
+    and once these two are in sys.modules, torch, transformers, diffusers, timm,
+    numba and librosa all import on worker threads with no trouble at all. torch is
+    the reason this reaches everything: it imports numpy, so every model load
+    inherited the deadlock.
+
+    Warming them costs about half a second and a few tens of MB - far less than
+    pre-importing torch, which is the alternative and which every user would pay
+    for whether or not they ever ran a model.
+
+    Guarded, because a fresh install has neither until the runtime is set up. That
+    is fine: the setup op installs them, and the engine restarts afterwards.
+    """
+    for mod in _WARM:
+        try:
+            __import__(mod)
+        except Exception:
+            pass    # not installed yet, or genuinely broken - either way, not fatal here
+
+
 def main() -> None:
+    _warm_native_libs()
+
     threading.Thread(target=_hw_poller, name="hw-poller", daemon=True).start()
     _autostart_api()
 

@@ -1,7 +1,7 @@
 {
   "name": "inferml",
   "productName": "InferML",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Any HuggingFace model. Local. Multi-modal. A desktop app for running models on-device.",
   "private": true,
   "main": "src/main/main.js",

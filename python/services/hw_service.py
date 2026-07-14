@@ -8,6 +8,7 @@ from __future__ import annotations
 import platform
 import shutil
 import subprocess
+import sys
 
 try:
     import psutil
@@ -18,14 +19,23 @@ except Exception:  # pragma: no cover
 def _probe_nvidia():
     if platform.system() == "Darwin" or not shutil.which("nvidia-smi"):
         return None
+    proc = None
     try:
-        out = subprocess.run(
+        # Deliberately Popen, not subprocess.run(timeout=...). On Windows, when run()
+        # hits its timeout it kills the child and then calls communicate() a second
+        # time *with no timeout* to collect what it wrote - and that call joins the
+        # pipe-reader threads forever if they cannot finish. This poller fires every
+        # few seconds for the life of the process, so "forever" is not theoretical:
+        # it was caught wedged in exactly that join, taking the hardware panel with
+        # it. Time out, kill, walk away - a missed GPU sample is worth nothing.
+        proc = subprocess.Popen(
             ["nvidia-smi",
              "--query-gpu=name,memory.used,memory.total,utilization.gpu,temperature.gpu",
              "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=2.0,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
         )
-        line = (out.stdout or "").strip().splitlines()
+        stdout, _ = proc.communicate(timeout=2.0)
+        line = (stdout or "").strip().splitlines()
         if not line:
             return None
         parts = [p.strip() for p in line[0].split(",")]
@@ -38,12 +48,26 @@ def _probe_nvidia():
             "temperature": int(float(temp)),
         }
     except Exception:
+        if proc is not None:
+            try:
+                proc.kill()          # and do NOT communicate() again; see above
+            except Exception:
+                pass
         return None
 
 
 def _torch_gpu():
+    # Only if torch is *already* loaded. This runs on the hardware poller, every
+    # few seconds, and importing torch here would mean a background thread pulling
+    # in several hundred MB of CUDA libraries purely to read a memory figure - for
+    # a user who may never run a model. Worse, it would race the first inference's
+    # own import of torch, and concurrent imports of it are exactly what deadlocks
+    # this process (see _warm_numpy in runner.py). nvidia-smi is the primary source
+    # anyway; this is only the fallback, and reporting nothing beats hanging.
+    torch = sys.modules.get("torch")
+    if torch is None:
+        return None
     try:
-        import torch
         if torch.cuda.is_available():
             props = torch.cuda.get_device_properties(0)
             free, total = torch.cuda.mem_get_info(0)

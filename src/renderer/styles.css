@@ -1395,6 +1395,14 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
   border-radius: 6px;
   color: var(--bad);
   font-size: 11.5px;
+  /* A failed install carries the tail of what pip or uv actually said. It is
+     several lines, and it is the only thing that makes the failure actionable -
+     so keep the newlines, and let a long resolver message scroll rather than
+     stretch the dialog. */
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 .mc-btn.downloading {

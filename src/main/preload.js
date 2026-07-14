@@ -45,8 +45,14 @@ const onEvent = (name) => (cb) => {
   return () => subs[name].delete(cb);
 };
 
-// Progress from the two long operations. Same fan-out, keyed by which one.
-const progress = { download: new Set(), setup: new Set() };
+// Progress from the long operations. Same fan-out, keyed by which one.
+//
+// `runtime` is deliberately not `setup`, though both narrate uv installing things.
+// The app treats a setup frame as proof that an install is running - it will spin
+// up a progress bar and tell the user their runtime is being downloaded - and
+// removing the runtime is the one operation where that is exactly the wrong
+// conclusion to draw.
+const progress = { download: new Set(), setup: new Set(), runtime: new Set() };
 ipcRenderer.on('inferml:progress', (_e, { kind, data }) => {
   for (const cb of progress[kind] || []) { try { cb(data); } catch { /* ditto */ } }
 });
@@ -139,10 +145,11 @@ contextBridge.exposeInMainWorld('inferml', {
   storage: {
     size: (key) => call('storage.size', { key }),
     clearHfCache: () => call('storage.clear', { key: 'hfCache' }),
-    clearPyRuntime: () => Promise.resolve({
-      ok: false,
-      error: 'The inference runtime lives in the app-managed environment. Reinstall it from Settings → Runtime, or delete the app data folder.',
-    }),
+
+    // Not an engine op, unlike its neighbours: the engine runs *inside* the venv
+    // whose packages this strips, so only the main process can do it (see ipc.js).
+    clearPyRuntime: () => ipcRenderer.invoke('inferml:clearPyRuntime'),
+    onClearProgress: onProgress('runtime'),
   },
 
   updates: {

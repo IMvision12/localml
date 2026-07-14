@@ -18,6 +18,37 @@ const { app, ipcMain, dialog, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
+const {
+  venvDir, uvCacheDir, ensureVenv, resetToBaseEnv, isVenvReady, findSystemPython, MIN_PYTHON,
+} = require('./python-env');
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Delete a directory Windows may not have finished letting go of.
+ *
+ * Killing a process is not the same as the OS closing its handles. For a moment
+ * after the engine dies, python.exe and the torch DLLs it mapped are still
+ * locked, and rmSync fails with EBUSY/EPERM. rmSync's own maxRetries covers the
+ * usual case; the outer loop covers a slow reap on a machine under load.
+ */
+async function rmDirWithRetry(dir, attempts = 12) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      if (!fs.existsSync(dir)) return;
+    } catch (e) {
+      if (i === attempts - 1) {
+        throw new Error(
+          `Could not delete the runtime: ${e.message}. Something still has a file open in it - close any terminal running from this environment and try again.`,
+        );
+      }
+    }
+    await sleep(400);
+  }
+  throw new Error('The runtime folder is still in use and could not be deleted.');
+}
+
 // The operations the UI is allowed to invoke, mirroring runner.py's OPS table.
 // The renderer is trusted code, but it also renders markdown from HuggingFace
 // model cards - so if XSS ever got past DOMPurify, this is the blast radius.
@@ -139,6 +170,115 @@ function registerIpc({ runner, getWin }) {
   ipcMain.handle('inferml:pickAudio', () => pickFile('audio', [
     { name: 'Audio', extensions: ['wav', 'mp3', 'flac', 'ogg', 'm4a'] },
   ]));
+
+  /**
+   * Delete the Python runtime: torch, transformers, diffusers, everything that
+   * came in with them, and the wheels cached to install them.
+   *
+   * This is a *shell* job, not an engine one. The engine cannot do it - it is a
+   * process running inside the very environment being emptied, and on Windows the
+   * torch DLLs it has mapped are locked for as long as it lives. It can no more
+   * uninstall them than saw off the branch it is sitting on. That is why this was
+   * once a hardcoded "go and delete the folder yourself" error in the preload.
+   *
+   * What it deliberately does NOT delete is the venv. The engine lives there too,
+   * and so do the handful of MB it needs to answer any request at all; removing it
+   * takes the whole app down and then has to put half of it straight back - a
+   * minute of creating an environment, bootstrapping pip and reinstalling the
+   * engine's own dependencies to arrive exactly where we started. `resetToBaseEnv`
+   * strips only the inference stack, in place, in seconds.
+   */
+  let clearing = false;
+
+  ipcMain.handle('inferml:clearPyRuntime', async () => {
+    // Never twice at once. A second pass would tear packages out from under the
+    // first one mid-uninstall and leave the environment in pieces. The UI guards
+    // this too, but the guard belongs where the damage happens.
+    if (clearing) return { ok: false, error: 'The runtime is already being removed.' };
+    clearing = true;
+
+    const userData = app.getPath('userData');
+    const dir = venvDir(userData);
+
+    // A silent long operation reads as a hang, so this narrates itself - but on its
+    // own channel, NOT the setup one. A setup frame is how the app knows an install
+    // is running; borrowing that channel made the app announce it was downloading a
+    // runtime at the exact moment it was deleting one.
+    const step = (text) => send('inferml:progress', { kind: 'runtime', data: { kind: 'step', text } });
+    const log = (text) => send('inferml:progress', { kind: 'runtime', data: { kind: 'log', text } });
+
+    // Nothing may lazily respawn the engine while its own packages are moving.
+    // Callers that arrive meanwhile are parked, not failed - they wait out the few
+    // seconds and then run normally.
+    runner.hold();
+    try {
+      // The engine has to be down for this: its interpreter is the one being
+      // modified, and on Windows a torch DLL it has mapped cannot be deleted.
+      step('Stopping the inference engine');
+      await runner.stopAndWait();
+
+      step('Removing the inference runtime');
+      await resetToBaseEnv(userData, (e) => { if (e.log) log(e.log); });
+
+      // And the wheel cache, or nothing is really freed: what remains in the venv
+      // is a few hundred MB, but the cached wheels behind it are gigabytes (a CUDA
+      // torch alone is 2.4GB). Leaving it also lets the next install restore torch
+      // from disk in seconds, which makes the delete look like it never happened.
+      step('Deleting cached downloads');
+      await rmDirWithRetry(uvCacheDir(userData));
+
+      // Open the gate *before* restarting: start() parks behind it like any other
+      // caller, so restarting through a shut gate would wait on itself forever.
+      // Everything parked during the removal wakes here and rides the same spawn.
+      step('Restarting the inference engine');
+      runner.release();
+      await runner.start();
+
+      // torch is gone now, and this is what flips the UI back to "install runtime".
+      try { lastStatus = await runner.call('tasks.status', {}); } catch { /* the next status call will catch it */ }
+
+      step('Runtime removed');
+      return { ok: true };
+    } catch (e) {
+      const error = String((e && e.message) || e);
+
+      if (isVenvReady(userData)) {
+        // The environment still runs the engine, so put the app back on its feet:
+        // chats, model search and settings all need one, torch or no torch.
+        runner.release();
+        try { await runner.start(); } catch { /* falls through to the error below */ }
+      } else {
+        // Stripping it left it unusable. Now - and only now - is a full rebuild
+        // worth the minute it costs, because there is nothing left to preserve.
+        try {
+          step('Repairing the Python environment');
+          await rmDirWithRetry(dir);
+          const py = findSystemPython();
+          if (!py.exe) throw new Error(`no Python ${MIN_PYTHON.join('.')}+ found`);
+          await ensureVenv(userData, py, (ev) => {
+            if (ev.step) step(ev.step);
+            if (ev.log) log(ev.log);
+          });
+          runner.release();
+          await runner.start();
+        } catch (repair) {
+          // Out of options. Parked callers must not wait for an engine that is
+          // never coming - suspend so they reject with the reason instead, and let
+          // them through. The next launch repairs the venv on its own: boot()
+          // rebuilds whenever isVenvReady is false.
+          runner.suspend(
+            `The Python environment is damaged and could not be repaired: ${(repair && repair.message) || repair}\n\nRestart InferML to try again.`,
+          );
+        }
+      }
+
+      return { ok: false, error };
+    } finally {
+      // Always, on every path. A gate left shut parks every future call forever.
+      runner.release();
+      clearing = false;
+    }
+  });
 
   return {
     // Fill the status cache before the UI is shown. Without this the first

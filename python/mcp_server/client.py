@@ -39,10 +39,19 @@ class InferMLClient:
                                  timeout=timeout or self.timeout)
 
     def _unreachable(self, e: Exception) -> InferMLError:
+        # Almost always one thing: the API is off. It is opt-in by design - it is
+        # the only surface InferML exposes - so "nothing is listening" is the
+        # normal state, not a fault. Say precisely how to change it. (This used to
+        # advise running `inferml --no-browser`, a command from the pipx web app
+        # that no longer exists, which left the one recoverable failure MCP has
+        # with instructions nobody could follow.)
         return InferMLError(
-            f"Can't reach the InferML server at {self.base_url} ({type(e).__name__}). "
-            "Start it with `inferml --no-browser`, or point this MCP server at a "
-            "different address with --url / INFERML_URL."
+            f"Can't reach InferML at {self.base_url} ({type(e).__name__}).\n\n"
+            "The local API is probably switched off - it is opt-in. Open the "
+            "InferML app and turn it on under Settings -> API & MCP, then retry. "
+            "If the app is not running, start it first.\n\n"
+            "(If your API listens elsewhere, point this server at it with --url, "
+            "or the INFERML_URL environment variable.)"
         )
 
     @staticmethod

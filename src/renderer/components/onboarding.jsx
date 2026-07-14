@@ -85,7 +85,7 @@ function Onboarding({ open, onDone, pyStatus = {}, pySetup, refreshPyStatus, run
       <div className="ob-main">
         <h1 className="ob-h1">Hardware</h1>
         <p className="ob-h2">
-          This is what local HuggingFace models will run on. We warn before downloading anything that won't fit.
+          This is what local HuggingFace models will run on.
         </p>
 
         <div className="hw-detect">

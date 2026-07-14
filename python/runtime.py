@@ -110,6 +110,25 @@ def probe_status() -> dict:
     except Exception:
         torch_version = None
 
+    # Which accelerator is *installed* - not which one this machine would prefer.
+    # These were the same value, which meant an NVIDIA box always reported "gpu"
+    # whatever was actually on disk: after deleting the runtime entirely, the
+    # onboarding screen still announced "Accelerator: GPU (CUDA)", and someone who
+    # deliberately chose CPU was told they had CUDA.
+    #
+    # torch's local version tag is the cheap honest answer, and it needs no import:
+    # the CUDA index ships "2.6.0+cu124", the CPU index "2.6.0+cpu". macOS ships
+    # neither tag - its wheel is MPS-capable, which is what "gpu" means there.
+    # None when torch is absent, so the UI can tell "not installed" from "CPU".
+    installed = None
+    if torch_version:
+        if "+cu" in torch_version:
+            installed = "gpu"
+        elif "+cpu" in torch_version:
+            installed = "cpu"
+        else:
+            installed = "gpu" if is_mac else "cpu"
+
     try:
         from services.hf_service import hf_cache_dir
         hf_cache = str(hf_cache_dir())
@@ -120,8 +139,8 @@ def probe_status() -> dict:
         "ready": ready,
         "runtimeInstalled": ready,
         "missing": missing,
-        "activeAccelerator": suggested,
-        "installedAccelerator": suggested,
+        "activeAccelerator": installed,
+        "installedAccelerator": installed,
         "accelerators": {},
         "hasNvidia": has_nvidia,
         "suggestedAccelerator": suggested,

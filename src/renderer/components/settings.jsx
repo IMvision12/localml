@@ -12,6 +12,7 @@ function Settings({
   pySetup,
   runSetup,
   refreshPyStatus,
+  resetPySetup,
 }) {
   const [section, setSection] = useStateS(initialSection || 'general');
 
@@ -64,7 +65,7 @@ function Settings({
           </div>
 
           <div className="settings-body">
-            {section === 'general'    && <GeneralSection    version={version} hw={hw} pyStatus={pyStatus} refreshPyStatus={refreshPyStatus}/>}
+            {section === 'general'    && <GeneralSection    version={version} hw={hw} pyStatus={pyStatus} refreshPyStatus={refreshPyStatus} resetPySetup={resetPySetup}/>}
             {section === 'appearance' && <AppearanceSection theme={theme} setTheme={setTheme}/>}
             {section === 'hardware'   && <HardwareSection   hw={hw} pyStatus={pyStatus} pySetup={pySetup} runSetup={runSetup} refreshPyStatus={refreshPyStatus}/>}
             {section === 'api'        && <ApiSection/>}
@@ -89,18 +90,21 @@ function Row({ title, sub, value, control, onClick }) {
   );
 }
 
-function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
+function GeneralSection({ version, hw, pyStatus, refreshPyStatus, resetPySetup }) {
   const openExternal = (url) => window.inferml?.app?.openExternal?.(url);
   const [logsPath, setLogsPath] = useStateS('');
   const [cacheStat, setCacheStat] = useStateS({ bytes: null, files: null, paths: [] });
-  const [runtimeStat, setRuntimeStat] = useStateS({ bytes: null, files: null });
+  const [runtimeStat, setRuntimeStat] = useStateS({ bytes: null, files: null, paths: [] });
 
 
 
   const [sizeLoading, setSizeLoading] = useStateS({ hf: true, py: true });
-  const [confirmKey, setConfirmKey] = useStateS(null); 
-  const [busy, setBusy] = useStateS(null); 
+  const [confirmKey, setConfirmKey] = useStateS(null);
+  const [busy, setBusy] = useStateS(null);
   const [error, setError] = useStateS(null);
+  // Clearing the runtime tears the venv down and rebuilds the base environment,
+  // which is a download. Show what it's doing rather than a motionless "Clearing…".
+  const [clearStep, setClearStep] = useStateS(null);
 
 
 
@@ -112,7 +116,7 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
       try {
         const res = await promise;
         if (key === 'hf' && res?.ok) setCacheStat({ bytes: res.bytes, files: res.files, paths: res.paths || [] });
-        if (key === 'py' && res?.ok) setRuntimeStat({ bytes: res.bytes, files: res.files });
+        if (key === 'py' && res?.ok) setRuntimeStat({ bytes: res.bytes, files: res.files, paths: res.paths || [] });
       } finally {
         const elapsed = performance.now() - start;
         if (elapsed < MIN_HOLD_MS) {
@@ -155,18 +159,40 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
   };
 
   const doClear = async (key) => {
+    if (busy) return;   // Enter is bound to the dialog's confirm button too
+
+    // Dismiss the dialog *now*, not when the work finishes. Clearing the runtime
+    // takes ~20s; leaving the confirm dialog up for all of it looks like the click
+    // did nothing, and the obvious response - click it again - used to fire a
+    // second concurrent clear that deleted the venv the first one was rebuilding.
+    setConfirmKey(null);
     setError(null);
     setBusy(key);
+    setClearStep(null);
+
+    // The removal narrates itself on its own channel. Listen only for the duration
+    // of the clear, so this row doesn't light up during an unrelated install.
+    const off = key === 'py'
+      ? window.inferml?.storage?.onClearProgress?.((evt) => {
+          if (evt?.kind === 'step') setClearStep(evt.text);
+        })
+      : null;
+
     try {
       const res = key === 'hf'
         ? await window.inferml?.storage?.clearHfCache?.()
         : await window.inferml?.storage?.clearPyRuntime?.();
       if (!res?.ok) setError(res?.error || 'Clear failed');
+      // The runtime is gone, so the remembered "install succeeded" must go with it.
+      // Onboarding reads that flag, not just pyStatus, and a stale one leaves it
+      // announcing a runtime that is no longer installed.
+      else if (key === 'py') resetPySetup?.();
     } catch (e) {
       setError(String(e?.message || e));
     } finally {
+      try { off && off(); } catch {}
       setBusy(null);
-      setConfirmKey(null);
+      setClearStep(null);
       await refreshSizes();
       try { await refreshPyStatus?.(); } catch {}
     }
@@ -235,7 +261,12 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
         <Row
           title="Python runtime"
           sub={(() => {
-            const pathStr = pyStatus?.runtimePath || '-';
+            if (busy === 'py') return clearStep || 'Removing the runtime…';
+            // Two directories now: the venv, and the wheel cache that feeds it.
+            // The cache is the larger of the two by an order of magnitude, so it
+            // gets named rather than quietly folded into the total.
+            const paths = runtimeStat.paths || [];
+            const pathStr = paths.length ? paths.join('  +  ') : (pyStatus?.runtimePath || '-');
             if (sizeLoading.py) return `${pathStr} · Calculating…`;
             const sizeStr = `${fmtBytes(runtimeStat.bytes)}${runtimeStat.files != null ? ` · ${runtimeStat.files} file${runtimeStat.files === 1 ? '' : 's'}` : ''}`;
             return `${pathStr} · ${sizeStr}`;
@@ -244,10 +275,10 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
             <button
               className="mc-btn ghost danger"
               onClick={(e) => { e.stopPropagation(); setConfirmKey('py'); }}
-              title="Delete the bundled Python venv. Re-running a model will re-install (~1 GB download)."
+              title="Delete the Python runtime (torch, transformers, all deps). Reinstall it from the setup prompt afterwards."
               disabled={busy === 'py' || sizeLoading.py || runtimeStat.bytes === 0}
             >
-              <Icon name="trash" size={11}/> {busy === 'py' ? 'Clearing…' : sizeLoading.py ? 'Calculating…' : 'Clean'}
+              <Icon name="trash" size={11}/> {busy === 'py' ? 'Removing…' : sizeLoading.py ? 'Calculating…' : 'Clean'}
             </button>
           }
         />
@@ -280,9 +311,9 @@ function GeneralSection({ version, hw, pyStatus, refreshPyStatus }) {
       />
       <ConfirmDialog
         open={confirmKey === 'py'}
-        title="Clear Python runtime?"
-        message="Deletes the bundled Python venv (interpreter, uv, torch, transformers, all deps). Next time you run a model you'll have to re-install the runtime (~1 GB download, several minutes). Use this if torch / torchaudio / transformers are misbehaving."
-        confirmLabel="Clear runtime"
+        title="Delete Python runtime?"
+        message="Deletes the Python environment (torch, transformers, diffusers and every other dependency) and the cache of downloaded wheels. You'll need to reinstall the runtime before running a model again."
+        confirmLabel="Delete runtime"
         cancelLabel="Cancel"
         danger
         onConfirm={() => doClear('py')}

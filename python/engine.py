@@ -189,23 +189,54 @@ class Engine:
 
         state = {"done": 0, "last_emit": 0.0}
         emit_lock = threading.Lock()
+        bars: list = []          # every byte-counting tqdm this download creates
+
+        def total_done() -> int:
+            """Bytes fetched so far. Call with emit_lock held.
+
+            Not simply the sum of what every progress bar reported. snapshot_download
+            drives *two* byte bars off our tqdm_class - one counting bytes pulled off
+            the network, one counting bytes written to disk - and hands every single
+            byte to both of them. Adding them together counted the download twice: a
+            159 MB model finished at "309 MB / 159 MB", sat at 100%, and kept going.
+
+            Those two bars measure the same payload from opposite ends, so the larger
+            is the truth and their sum is meaningless. (Transfer legitimately trails
+            reconstruction, because Xet dedupes and compresses what it sends over the
+            wire - bytes that never travel still land on disk.)
+
+            Per-file bars are the other case: they cover disjoint files, so those do
+            add up. The two are told apart structurally rather than by sniffing hf's
+            labels: an aggregate bar starts with no total and grows as files register,
+            while a per-file bar is created knowing exactly how big its file is.
+            """
+            aggregate = [b._n_bytes for b in bars if b._aggregate]
+            if aggregate:
+                return int(max(aggregate))
+            return int(sum(b._n_bytes for b in bars))
 
         def emit(final: bool = False) -> None:
             with emit_lock:
+                state["done"] = total_done()
                 done = state["done"]
                 pct = (done / total_bytes * 100.0) if total_bytes else 0.0
                 on_progress({
                     "done": int(done),
                     "total": int(total_bytes),
-                    "pct": round(pct, 2),
+                    "pct": round(min(pct, 100.0), 2),
                     "final": bool(final),
                 })
 
         class ProgressTqdm(_BaseTqdm):
             def __init__(self, *args, **kwargs):
                 self._is_bytes = kwargs.get("unit") == "B"
+                self._aggregate = not kwargs.get("total")
+                self._n_bytes = 0
                 kwargs["disable"] = True
                 super().__init__(*args, **kwargs)
+                if self._is_bytes:
+                    with emit_lock:
+                        bars.append(self)
 
             def update(self, n=1):
                 if cancel_event is not None and cancel_event.is_set():
@@ -214,7 +245,8 @@ class Engine:
                 if self._is_bytes and n:
                     should_emit = False
                     with emit_lock:
-                        state["done"] += n
+                        self._n_bytes += n
+                        state["done"] = total_done()
                         now = time.time()
                         if (now - state["last_emit"]) >= 0.15:
                             state["last_emit"] = now

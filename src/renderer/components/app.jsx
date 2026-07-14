@@ -124,6 +124,13 @@ function App() {
   }, []);
   useEffect(() => { refreshPyStatus(); }, [refreshPyStatus]);
 
+  // `pySetup` remembers the last install for as long as the app is open, and
+  // `done: true` is what the onboarding screen reads to say "Python runtime ready".
+  // Deleting the runtime has to clear it, or onboarding keeps reporting a runtime
+  // that is no longer on disk - refreshing pyStatus alone is not enough, because
+  // the stale flag wins.
+  const resetPySetup = useCallback(() => setPySetup(null), []);
+
 
 
 
@@ -142,7 +149,12 @@ function App() {
       pendingLog = [];
       pendingStep = null;
       setPySetup(prev => {
-        const base = prev || { running: true, log: [], step: '' };
+        // Never `running: true` here. A progress frame is evidence that something
+        // is talking, not that *this app* started an install - and runPySetup sets
+        // running itself, synchronously, before the first frame can arrive. Taking
+        // a frame as proof of an install is what let the runtime *removal* render
+        // as a runtime download, complete with progress bar, that then never ended.
+        const base = prev || { running: false, log: [], step: '' };
         const merged = base.log.concat(linesToAdd);
         const log = merged.length > MAX_LOG ? merged.slice(-MAX_LOG) : merged;
         return { ...base, step: stepToAdd ?? base.step, log };
@@ -448,6 +460,7 @@ function App() {
           pySetup={pySetup}
           runSetup={runPySetup}
           refreshPyStatus={refreshPyStatus}
+          resetPySetup={resetPySetup}
         />
         {updatingTo && <UpdatingOverlay version={updatingTo}/>}
       </div>
