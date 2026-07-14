@@ -140,6 +140,17 @@
         <p class="cta-sub">
           Free and open source · <a href="https://github.com/IMvision12/InferML/releases/latest">all platforms</a> · needs Python 3.10+
         </p>
+        <!-- The unsigned-build warning lives in detail near the download section, but the
+             hero is where people actually click - so the heads-up has to be here, before
+             SmartScreen/Gatekeeper ambushes them, not two screens further down. -->
+        <p class="cta-note">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <path d="M12 9v4"/><path d="M12 17h.01"/>
+          </svg>
+          <span>Not code-signed yet - Windows and macOS will warn on first launch.
+            <a href="#first-run">What to expect</a></span>
+        </p>
       </div>
     </section>
 
@@ -679,10 +690,11 @@ resp = client.chat.completions.<span class="tok-fn">create</span>(
       <!-- The builds are unsigned (electron-builder.yml: no Windows cert, `identity: null`
            on mac), so every OS challenges the app the first time it runs. People read that
            as "this is malware" and bounce, so say it here before they meet it. -->
-      <div class="first-run">
+      <div class="first-run" id="first-run">
         <p class="first-run-lead">
           InferML isn't code-signed yet, so your OS will question it the first time you open
-          it. Nothing is wrong with the download - here is what you'll see, and how to get through it.
+          it. Nothing is wrong with the download - here is what you'll see, and how to get
+          through it. (The one-line terminal install below sidesteps most of these prompts.)
         </p>
         <div class="first-run-grid">
           <div class="fr">

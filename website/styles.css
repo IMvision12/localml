@@ -363,6 +363,26 @@ a { color: inherit; text-decoration: none; }
 .cta-sub a { color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border-2); }
 .cta-sub a:hover { color: var(--fg); }
 
+/* Unsigned-build heads-up, right where the download actually happens. Amber so it
+   registers as a caution, dim so it doesn't compete with the CTA above it. */
+.cta-note {
+  margin: 14px auto 0;
+  display: inline-flex; align-items: baseline; gap: 8px;
+  max-width: 560px;
+  padding: 8px 14px;
+  font-size: 12.5px; line-height: 1.55; color: var(--fg-2); text-align: left;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: var(--r-md);
+}
+.cta-note svg { color: var(--warn); flex-shrink: 0; transform: translateY(2px); }
+.cta-note a {
+  color: var(--fg);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--warn);
+  white-space: nowrap;
+}
+.cta-note a:hover { color: var(--warn); }
+
 /* ─── demo (DETR input → output) ───────────────────────────────────────── */
 .demo { max-width: 1200px; margin: 80px auto 0; padding: 0 32px; }
 .demo.demo-tight { margin-top: 36px; }
@@ -1147,7 +1167,9 @@ a { color: inherit; text-decoration: none; }
 .dl-card-meta { font-size: 12.5px; color: var(--fg-3); font-family: 'JetBrains Mono', monospace; }
 
 /* ─── first-launch warnings (the app is unsigned on every platform) ─────── */
-.first-run { max-width: 940px; margin: 22px auto 0; }
+/* scroll-margin: the hero's .cta-note deep-links here; without it the smooth
+   scroll parks the block's top edge underneath the sticky nav. */
+.first-run { max-width: 940px; margin: 22px auto 0; scroll-margin-top: 90px; }
 .first-run-lead {
   text-align: center; font-size: 13px; color: var(--fg-3);
   margin: 0 0 14px; line-height: 1.7;
